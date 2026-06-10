@@ -1,0 +1,79 @@
+from collections.abc import AsyncIterator
+
+from fastapi import Depends, Header, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import Settings
+from app.core.security import validate_api_key
+from app.repositories.prediction_repository import PredictionRepository
+from app.services.drift_service import DriftService
+from app.services.metrics_service import MetricsService
+from app.services.model_service import ModelService
+from app.services.prediction_service import PredictionService
+
+
+def get_settings(request: Request) -> Settings:
+    """Return request-scoped settings from the application state."""
+
+    return request.app.state.settings
+
+
+async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
+    """Yield one async database session for the request."""
+
+    session_factory = request.app.state.session_factory
+    async with session_factory() as session:
+        yield session
+
+
+def require_api_key(
+    request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+) -> None:
+    """Require a valid API key for protected endpoints."""
+
+    settings = get_settings(request)
+    validate_api_key(provided_key=x_api_key, expected_key=settings.api_key)
+
+
+def get_prediction_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> PredictionRepository:
+    """Build a prediction repository from the current database session."""
+
+    return PredictionRepository(session=session)
+
+
+def get_prediction_service(
+    request: Request,
+    repository: PredictionRepository = Depends(get_prediction_repository),
+) -> PredictionService:
+    """Build the scoring service for a request."""
+
+    return PredictionService(
+        repository=repository,
+        model_bundle=request.app.state.model_bundle,
+        settings=request.app.state.settings,
+    )
+
+
+def get_model_service(request: Request) -> ModelService:
+    """Build the model metadata service."""
+
+    return ModelService(model_bundle=request.app.state.model_bundle)
+
+
+def get_metrics_service(
+    repository: PredictionRepository = Depends(get_prediction_repository),
+) -> MetricsService:
+    """Build the model metrics service."""
+
+    return MetricsService(repository=repository)
+
+
+def get_drift_service(
+    repository: PredictionRepository = Depends(get_prediction_repository),
+) -> DriftService:
+    """Build the drift-report service."""
+
+    return DriftService(repository=repository)

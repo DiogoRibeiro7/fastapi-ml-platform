@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Testing & coverage
+.pytest_cache/
+.benchmarks/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+
+# Type checkers & linters
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# ML artifacts
+artifacts/*.joblib
+artifacts/*.pkl
+artifacts/*.onnx
+mlruns/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs & editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Agent docs (local only)
+AGENTS.md
+CODE_AGENT_PROMPTS.md
