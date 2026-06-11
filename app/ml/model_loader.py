@@ -1,9 +1,9 @@
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from numpy.typing import NDArray
 
@@ -80,7 +80,7 @@ def _load_joblib_model(artifact_path: Path) -> ProbabilityModel | None:
     loaded_model = joblib.load(artifact_path)
     if not hasattr(loaded_model, "predict_proba"):
         raise TypeError("Loaded model must expose a predict_proba method.")
-    return loaded_model
+    return cast(ProbabilityModel, loaded_model)
 
 
 def _load_metadata(metadata_path: Path) -> dict[str, Any]:
@@ -111,7 +111,7 @@ def _extract_coefficients(model: ProbabilityModel) -> dict[str, float]:
 def load_model_bundle(artifact_path: Path, metadata_path: Path) -> ModelBundle:
     """Load a persisted model or fall back to a deterministic demo model."""
 
-    loaded_at = datetime.now(timezone.utc)
+    loaded_at = datetime.now(UTC)
     model = _load_joblib_model(artifact_path)
     metadata = _load_metadata(metadata_path)
 

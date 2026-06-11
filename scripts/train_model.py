@@ -25,7 +25,9 @@ MODEL_PATH = ARTIFACT_DIR / "fraud_model.joblib"
 METADATA_PATH = ARTIFACT_DIR / "fraud_model_metadata.json"
 
 
-def make_synthetic_dataset(n_samples: int = 15_000, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
+def make_synthetic_dataset(
+    n_samples: int = 15_000, seed: int = 42
+) -> tuple[np.ndarray, np.ndarray]:
     """Create synthetic feature data with a known fraud-risk mechanism."""
 
     rng = np.random.default_rng(seed)

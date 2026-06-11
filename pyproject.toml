@@ -17,7 +17,7 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0,<3.0",
     "aiosqlite>=0.20,<1.0",
     "asyncpg>=0.29,<1.0",
-    "python-json-logger>=2.0,<4.0",
+    "python-json-logger>=3.0,<5.0",
     "numpy>=1.26,<3.0",
     "scikit-learn>=1.4,<2.0",
     "joblib>=1.4,<2.0",
@@ -41,13 +41,25 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "ANN", "S"]
-ignore = ["ANN101", "ANN102", "S101"]
+ignore = ["S101"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency injection relies on calls in argument defaults.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Security", "fastapi.Query", "fastapi.Header"]
+
+[tool.ruff.lint.per-file-ignores]
+# X/y naming follows scikit-learn convention.
+"scripts/train_model.py" = ["N806"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 plugins = []
 exclude = ["tests"]
+
+[[tool.mypy.overrides]]
+module = "joblib.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-q"

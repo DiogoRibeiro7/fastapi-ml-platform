@@ -99,7 +99,7 @@ class PredictionService:
             risk_score=row.risk_score,
             risk_level=row.risk_level,  # type: ignore[arg-type]
             decision=row.decision,  # type: ignore[arg-type]
-            top_features=row.top_features,
+            top_features=row.top_features,  # type: ignore[arg-type]
             model_version=row.model_version,
         )
 

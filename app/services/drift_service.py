@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.ml.drift import (
     baseline_from_feature_names,
@@ -46,7 +46,7 @@ class DriftService:
             summary = f"Recent prediction features show {max_severity} drift severity."
 
         return DriftReportResponse(
-            generated_at=datetime.now(timezone.utc),
+            generated_at=datetime.now(UTC),
             sample_size=len(rows),
             features=feature_results,
             summary=summary,

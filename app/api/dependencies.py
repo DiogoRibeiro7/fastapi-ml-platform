@@ -15,7 +15,8 @@ from app.services.prediction_service import PredictionService
 def get_settings(request: Request) -> Settings:
     """Return request-scoped settings from the application state."""
 
-    return request.app.state.settings
+    settings: Settings = request.app.state.settings
+    return settings
 
 
 async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:

@@ -61,11 +61,11 @@ def baseline_from_feature_names(feature_names: Iterable[str]) -> dict[str, list[
         elif feature == "amount_ratio":
             values = rng.lognormal(mean=0.1, sigma=0.5, size=500)
         elif feature in {"country_mismatch", "is_night", "is_weekend", "is_card_not_present"}:
-            values = rng.binomial(n=1, p=0.2, size=500)
+            values = rng.binomial(n=1, p=0.2, size=500).astype(np.float64)
         elif feature == "customer_age_days":
-            values = rng.integers(low=1, high=2_000, size=500)
+            values = rng.integers(low=1, high=2_000, size=500).astype(np.float64)
         else:
-            values = rng.poisson(lam=2.0, size=500)
+            values = rng.poisson(lam=2.0, size=500).astype(np.float64)
         baseline[feature] = [float(item) for item in values]
     return baseline
 
