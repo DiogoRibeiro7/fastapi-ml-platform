@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.ml.training import train_baseline_model
@@ -8,13 +9,14 @@ from app.ml.training import train_baseline_model
 def _registration_payload(
     version: str = "v1",
     artifact_path: str = "artifacts/missing.joblib",
+    metrics: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "name": "fraud-model",
         "version": version,
         "artifact_path": artifact_path,
         "training_dataset": "synthetic-2026-06",
-        "metrics": {"roc_auc": 0.91},
+        "metrics": {"roc_auc": 0.91} if metrics is None else metrics,
     }
 
 
@@ -144,6 +146,99 @@ def test_activate_missing_artifact_returns_422(
     # The failed promotion must not flip the active flag.
     models = client.get("/v1/models", headers=auth_headers).json()["models"]
     assert all(model["is_active"] is False for model in models)
+
+
+def test_compare_models_reports_metric_deltas(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Comparison should return per-metric values and deltas for both models."""
+
+    baseline = client.post(
+        "/v1/models",
+        headers=auth_headers,
+        json=_registration_payload("v1", metrics={"roc_auc": 0.90, "average_precision": 0.70}),
+    ).json()
+    candidate = client.post(
+        "/v1/models",
+        headers=auth_headers,
+        json=_registration_payload("v2", metrics={"roc_auc": 0.93, "average_precision": 0.68}),
+    ).json()
+
+    response = client.get(
+        "/v1/models/compare",
+        headers=auth_headers,
+        params={"baseline_id": baseline["id"], "candidate_id": candidate["id"]},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["baseline"]["version"] == "v1"
+    assert payload["candidate"]["version"] == "v2"
+
+    by_metric = {item["metric"]: item for item in payload["metrics"]}
+    assert by_metric["roc_auc"]["delta"] == pytest.approx(0.03)
+    assert by_metric["average_precision"]["delta"] == pytest.approx(-0.02)
+
+
+def test_compare_models_handles_missing_and_non_numeric_metrics(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Metrics in only one model, or non-numeric, should have a null delta."""
+
+    baseline = client.post(
+        "/v1/models",
+        headers=auth_headers,
+        json=_registration_payload("v1", metrics={"roc_auc": 0.90, "note": "baseline"}),
+    ).json()
+    candidate = client.post(
+        "/v1/models",
+        headers=auth_headers,
+        json=_registration_payload("v2", metrics={"recall": 0.55, "note": "candidate"}),
+    ).json()
+
+    response = client.get(
+        "/v1/models/compare",
+        headers=auth_headers,
+        params={"baseline_id": baseline["id"], "candidate_id": candidate["id"]},
+    )
+
+    assert response.status_code == 200
+    by_metric = {item["metric"]: item for item in response.json()["metrics"]}
+
+    assert by_metric["roc_auc"] == {
+        "metric": "roc_auc",
+        "baseline": 0.90,
+        "candidate": None,
+        "delta": None,
+    }
+    assert by_metric["recall"] == {
+        "metric": "recall",
+        "baseline": None,
+        "candidate": 0.55,
+        "delta": None,
+    }
+    assert by_metric["note"]["delta"] is None
+
+
+def test_compare_unknown_model_returns_404(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Comparing against a nonexistent model id should return 404."""
+
+    existing = client.post(
+        "/v1/models", headers=auth_headers, json=_registration_payload("v1")
+    ).json()
+
+    response = client.get(
+        "/v1/models/compare",
+        headers=auth_headers,
+        params={"baseline_id": existing["id"], "candidate_id": 9999},
+    )
+
+    assert response.status_code == 404
 
 
 def test_activate_unknown_model_returns_404(

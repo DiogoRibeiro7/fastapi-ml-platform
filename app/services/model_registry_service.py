@@ -1,14 +1,56 @@
 from pathlib import Path
+from typing import Any
 
 from app.core.exceptions import ModelNotFoundError, ModelPromotionError
 from app.ml.model_loader import load_registered_bundle
 from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.schemas.model import (
+    MetricComparison,
+    ModelComparisonResponse,
     ModelRegistrationRequest,
     RegisteredModelListResponse,
     RegisteredModelResponse,
 )
+
+
+def _as_float(value: object) -> float | None:
+    """Return value as a float, or None when it is not a numeric metric.
+
+    Booleans are rejected even though bool is a subclass of int, because a
+    flag is not a comparable metric.
+    """
+
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        return float(value)
+    return None
+
+
+def _compare_metrics(
+    baseline: dict[str, Any], candidate: dict[str, Any]
+) -> list[MetricComparison]:
+    """Build a per-metric comparison across the union of metric names."""
+
+    comparisons = []
+    for metric in sorted(set(baseline) | set(candidate)):
+        baseline_value = _as_float(baseline.get(metric))
+        candidate_value = _as_float(candidate.get(metric))
+        delta = (
+            candidate_value - baseline_value
+            if baseline_value is not None and candidate_value is not None
+            else None
+        )
+        comparisons.append(
+            MetricComparison(
+                metric=metric,
+                baseline=baseline_value,
+                candidate=candidate_value,
+                delta=delta,
+            )
+        )
+    return comparisons
 
 
 class ModelRegistryService:
@@ -74,3 +116,21 @@ class ModelRegistryService:
 
         self._model_provider.swap(bundle)
         return RegisteredModelResponse.model_validate(activated)
+
+    async def compare_models(
+        self, baseline_id: int, candidate_id: int
+    ) -> ModelComparisonResponse:
+        """Compare the stored metrics of two registered model versions."""
+
+        baseline = await self._repository.get_by_id(baseline_id)
+        if baseline is None:
+            raise ModelNotFoundError(f"Registered model not found: {baseline_id}")
+        candidate = await self._repository.get_by_id(candidate_id)
+        if candidate is None:
+            raise ModelNotFoundError(f"Registered model not found: {candidate_id}")
+
+        return ModelComparisonResponse(
+            baseline=RegisteredModelResponse.model_validate(baseline),
+            candidate=RegisteredModelResponse.model_validate(candidate),
+            metrics=_compare_metrics(baseline.metrics, candidate.metrics),
+        )

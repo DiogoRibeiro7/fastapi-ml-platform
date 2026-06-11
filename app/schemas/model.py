@@ -45,3 +45,23 @@ class RegisteredModelListResponse(BaseModel):
     """List of registered models."""
 
     models: list[RegisteredModelResponse]
+
+
+class MetricComparison(BaseModel):
+    """One metric compared across two model versions."""
+
+    metric: str
+    baseline: float | None
+    candidate: float | None
+    delta: float | None = Field(
+        default=None,
+        description="candidate - baseline, present only when both values are numeric.",
+    )
+
+
+class ModelComparisonResponse(BaseModel):
+    """Side-by-side comparison of two registered model versions."""
+
+    baseline: RegisteredModelResponse
+    candidate: RegisteredModelResponse
+    metrics: list[MetricComparison]

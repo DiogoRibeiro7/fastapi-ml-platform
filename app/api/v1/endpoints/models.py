@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import get_model_registry_service, get_model_service, require_api_key
 from app.core.exceptions import DuplicateModelError, ModelNotFoundError, ModelPromotionError
 from app.schemas.model import (
+    ModelComparisonResponse,
     ModelMetadataResponse,
     ModelRegistrationRequest,
     RegisteredModelListResponse,
@@ -30,6 +31,23 @@ async def list_models(
     """List all registered models, newest first."""
 
     return await service.list_models()
+
+
+@router.get("/models/compare", response_model=ModelComparisonResponse)
+async def compare_models(
+    baseline_id: int,
+    candidate_id: int,
+    service: ModelRegistryService = Depends(get_model_registry_service),
+) -> ModelComparisonResponse:
+    """Compare two registered model versions by their stored metrics."""
+
+    try:
+        return await service.compare_models(baseline_id, candidate_id)
+    except ModelNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
