@@ -53,6 +53,9 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `POST` | `/v1/transactions/batch-score` | Score many transactions. |
 | `GET` | `/v1/transactions/{transaction_id}` | Fetch a logged prediction. |
 | `GET` | `/v1/models/current` | Show active model metadata. |
+| `GET` | `/v1/models` | List registered models. |
+| `POST` | `/v1/models` | Register a model version. |
+| `POST` | `/v1/models/{model_id}/activate` | Activate one registered model. |
 | `GET` | `/v1/metrics/model` | Show prediction-count and risk-distribution metrics. |
 | `GET` | `/v1/drift/report` | Show a PSI-based drift report. |
 

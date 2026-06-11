@@ -4,3 +4,11 @@ class PredictionNotFoundError(LookupError):
 
 class ModelUnavailableError(RuntimeError):
     """Raised when the scoring model cannot be used."""
+
+
+class ModelNotFoundError(LookupError):
+    """Raised when a registered model cannot be found."""
+
+
+class DuplicateModelError(ValueError):
+    """Raised when a model name and version pair is already registered."""

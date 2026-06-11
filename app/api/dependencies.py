@@ -5,9 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.security import validate_api_key
+from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
 from app.services.drift_service import DriftService
 from app.services.metrics_service import MetricsService
+from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
 from app.services.prediction_service import PredictionService
 
@@ -62,6 +64,22 @@ def get_model_service(request: Request) -> ModelService:
     """Build the model metadata service."""
 
     return ModelService(model_bundle=request.app.state.model_bundle)
+
+
+def get_model_registry_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> ModelRegistryRepository:
+    """Build a model registry repository from the current database session."""
+
+    return ModelRegistryRepository(session=session)
+
+
+def get_model_registry_service(
+    repository: ModelRegistryRepository = Depends(get_model_registry_repository),
+) -> ModelRegistryService:
+    """Build the model registry service."""
+
+    return ModelRegistryService(repository=repository)
 
 
 def get_metrics_service(
