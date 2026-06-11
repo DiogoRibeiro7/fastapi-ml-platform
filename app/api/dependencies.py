@@ -8,6 +8,7 @@ from app.core.security import validate_api_key
 from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
+from app.services.calibration_service import CalibrationService
 from app.services.drift_service import DriftService
 from app.services.metrics_service import MetricsService
 from app.services.model_registry_service import ModelRegistryService
@@ -111,3 +112,11 @@ def get_drift_service(
     """Build the drift-report service."""
 
     return DriftService(repository=repository)
+
+
+def get_calibration_service(
+    provider: ModelProvider = Depends(get_model_provider),
+) -> CalibrationService:
+    """Build the calibration-report service for the active model."""
+
+    return CalibrationService(model_bundle=provider.bundle)

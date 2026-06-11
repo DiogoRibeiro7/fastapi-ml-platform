@@ -20,6 +20,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from app.ml.calibration import (
+    brier_score,
+    calibration_bins,
+    expected_calibration_error,
+)
 from app.ml.feature_pipeline import FEATURE_NAMES
 
 MODEL_NAME = "synthetic-fraud-risk-model"
@@ -107,10 +112,15 @@ def train_baseline_model(
     model.fit(X_train, y_train)
     probabilities = model.predict_proba(X_test)[:, 1]
 
+    calibration_bins_test = calibration_bins(y_test, probabilities)
     metrics = {
         "roc_auc": float(roc_auc_score(y_test, probabilities)),
         "average_precision": float(average_precision_score(y_test, probabilities)),
         "positive_rate": float(y.mean()),
+        "brier_score": brier_score(y_test, probabilities),
+        "expected_calibration_error": expected_calibration_error(
+            calibration_bins_test, len(y_test)
+        ),
     }
 
     metadata: dict[str, Any] = {
