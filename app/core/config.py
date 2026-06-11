@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     model_artifact_path: Path = Field(default=Path("artifacts/fraud_model.joblib"))
     model_metadata_path: Path = Field(default=Path("artifacts/fraud_model_metadata.json"))
     train_baseline_if_missing: bool = Field(default=True)
+    enable_shap_explanations: bool = Field(default=False)
 
     min_review_score: float = Field(default=0.65, ge=0.0, le=1.0)
     min_decline_score: float = Field(default=0.90, ge=0.0, le=1.0)

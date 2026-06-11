@@ -1,16 +1,20 @@
 import logging
 from typing import Any
 
+from numpy.typing import NDArray
+
 from app.core.config import Settings
 from app.core.exceptions import PredictionNotFoundError
-from app.ml.explainer import top_feature_contributions
+from app.ml.explainer import top_contributions_from_impacts, top_feature_contributions
 from app.ml.feature_pipeline import build_feature_dict, features_to_array
 from app.ml.model_loader import ModelBundle, fraud_probability
+from app.ml.shap_explainer import ShapExplainer
 from app.repositories.prediction_repository import PredictionRepository
 from app.schemas.prediction import (
     BatchPredictionRequest,
     BatchPredictionResponse,
     Decision,
+    FeatureContribution,
     PredictionResponse,
     RiskLevel,
     TransactionInput,
@@ -28,10 +32,12 @@ class PredictionService:
         repository: PredictionRepository,
         model_bundle: ModelBundle,
         settings: Settings,
+        shap_explainer: ShapExplainer | None = None,
     ) -> None:
         self._repository = repository
         self._model_bundle = model_bundle
         self._settings = settings
+        self._shap_explainer = shap_explainer
 
     async def score_transaction(self, transaction: TransactionInput) -> PredictionResponse:
         """Score and persist one transaction."""
@@ -41,11 +47,7 @@ class PredictionService:
         risk_score = fraud_probability(self._model_bundle.model, feature_array)
         risk_level = self._risk_level(risk_score)
         decision = self._decision(risk_score)
-        top_features = top_feature_contributions(
-            features=features,
-            coefficients=self._model_bundle.coefficients,
-            limit=5,
-        )
+        top_features = self._explain(features, feature_array)
 
         response = PredictionResponse(
             transaction_id=transaction.resolved_transaction_id,
@@ -101,6 +103,28 @@ class PredictionService:
             decision=row.decision,  # type: ignore[arg-type]
             top_features=row.top_features,  # type: ignore[arg-type]
             model_version=row.model_version,
+        )
+
+    def _explain(
+        self,
+        features: dict[str, float],
+        feature_array: NDArray[Any],
+    ) -> list[FeatureContribution]:
+        """Explain a prediction with SHAP when available, else linearly.
+
+        SHAP is opt-in and may fail at runtime, so the linear contribution
+        fallback always covers the case where no SHAP impacts are produced.
+        """
+
+        if self._shap_explainer is not None:
+            impacts = self._shap_explainer.explain(feature_array)
+            if impacts is not None:
+                return top_contributions_from_impacts(impacts, limit=5)
+
+        return top_feature_contributions(
+            features=features,
+            coefficients=self._model_bundle.coefficients,
+            limit=5,
         )
 
     def _decision(self, risk_score: float) -> Decision:

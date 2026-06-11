@@ -150,6 +150,24 @@ artifacts/fraud_model_metadata.json
 
 On startup, the API loads this artifact. If it is missing, the API trains and saves the baseline model automatically (the dataset generator is seeded, so the result is deterministic). Set `TRAIN_BASELINE_IF_MISSING=false` to disable auto-training and use the rule-based fallback model instead. The Docker image bakes the trained artifact in at build time.
 
+## Explainability
+
+Each prediction returns `top_features`, a local explanation of the score. By default this is a fast linear contribution (`feature value × model coefficient`).
+
+For SHAP-based explanations, install the optional dependency and enable the flag:
+
+```bash
+pip install -e ".[explain]"
+```
+
+```text
+ENABLE_SHAP_EXPLANATIONS=true
+```
+
+The SHAP explainer is built lazily on first use and cached for the lifetime of the active model (and rebuilt after a promotion). If `shap` is not installed or an explanation fails, the service logs it once and falls back to the linear contribution, so enabling the flag is always safe.
+
+**Performance:** SHAP runs a perturbation-based explainer per prediction, which is substantially slower than the linear path (milliseconds vs. microseconds) and adds CPU load proportional to the background sample size. Keep it disabled for high-throughput real-time scoring; enable it for review queues, audits, or offline analysis where per-decision explanations matter more than latency.
+
 ## Run tests
 
 ```bash

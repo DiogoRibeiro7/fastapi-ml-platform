@@ -62,10 +62,13 @@ def get_prediction_service(
 ) -> PredictionService:
     """Build the scoring service for a request."""
 
+    settings: Settings = request.app.state.settings
+    shap_explainer = provider.shap_explainer() if settings.enable_shap_explanations else None
     return PredictionService(
         repository=repository,
         model_bundle=provider.bundle,
-        settings=request.app.state.settings,
+        settings=settings,
+        shap_explainer=shap_explainer,
     )
 
 

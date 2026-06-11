@@ -22,7 +22,7 @@
 - [x] Add model promotion workflow.
 - [x] Add model version comparison.
 - [ ] Add calibration metrics.
-- [ ] Add SHAP-based explainability.
+- [x] Add SHAP-based explainability.
 - [ ] Add threshold optimization by business cost.
 - [ ] Add offline evaluation reports.
 

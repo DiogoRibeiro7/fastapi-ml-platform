@@ -1,4 +1,5 @@
 from app.ml.model_loader import ModelBundle
+from app.ml.shap_explainer import ShapExplainer, build_shap_explainer
 
 
 class ModelProvider:
@@ -15,6 +16,7 @@ class ModelProvider:
 
     def __init__(self, bundle: ModelBundle) -> None:
         self._bundle = bundle
+        self._shap_explainer: ShapExplainer | None = None
 
     @property
     def bundle(self) -> ModelBundle:
@@ -23,6 +25,18 @@ class ModelProvider:
         return self._bundle
 
     def swap(self, bundle: ModelBundle) -> None:
-        """Replace the served model bundle."""
+        """Replace the served model bundle and drop its cached explainer."""
 
         self._bundle = bundle
+        self._shap_explainer = None
+
+    def shap_explainer(self) -> ShapExplainer:
+        """Return the SHAP explainer for the current model, building it once.
+
+        The explainer is cached for the lifetime of the current model and
+        rebuilt after a promotion swaps in a new model.
+        """
+
+        if self._shap_explainer is None:
+            self._shap_explainer = build_shap_explainer(self._bundle)
+        return self._shap_explainer
