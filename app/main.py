@@ -30,6 +30,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.model_bundle = load_model_bundle(
             artifact_path=app_settings.model_artifact_path,
             metadata_path=app_settings.model_metadata_path,
+            train_if_missing=app_settings.train_baseline_if_missing,
         )
 
         await create_database_tables(engine)

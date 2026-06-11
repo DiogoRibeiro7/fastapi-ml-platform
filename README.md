@@ -41,7 +41,7 @@ Example response:
 }
 ```
 
-The app includes a deterministic fallback model, so it works immediately. You can also train and save a scikit-learn model with `scripts/train_model.py`.
+On first startup the app trains and saves a seeded scikit-learn baseline model automatically, so it serves a real trained model immediately. You can also train it ahead of time with `scripts/train_model.py`. A deterministic rule-based fallback remains for when training is disabled (`TRAIN_BASELINE_IF_MISSING=false`) or fails.
 
 ## API endpoints
 
@@ -144,7 +144,7 @@ artifacts/fraud_model.joblib
 artifacts/fraud_model_metadata.json
 ```
 
-On startup, the API tries to load this artifact. If it is not available, it uses the deterministic fallback model.
+On startup, the API loads this artifact. If it is missing, the API trains and saves the baseline model automatically (the dataset generator is seeded, so the result is deterministic). Set `TRAIN_BASELINE_IF_MISSING=false` to disable auto-training and use the rule-based fallback model instead. The Docker image bakes the trained artifact in at build time.
 
 ## Run tests
 

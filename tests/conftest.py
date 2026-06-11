@@ -25,6 +25,7 @@ def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
         database_url=f"sqlite+aiosqlite:///{database_path}",
         model_artifact_path=tmp_path / "missing_model.joblib",
         model_metadata_path=tmp_path / "missing_metadata.json",
+        train_baseline_if_missing=False,
     )
     app = create_app(settings=settings)
 

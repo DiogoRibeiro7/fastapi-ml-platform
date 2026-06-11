@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -8,6 +9,8 @@ from typing import Any, Protocol, cast
 from numpy.typing import NDArray
 
 from app.ml.feature_pipeline import FEATURE_NAMES
+
+logger = logging.getLogger(__name__)
 
 
 class ProbabilityModel(Protocol):
@@ -108,11 +111,30 @@ def _extract_coefficients(model: ProbabilityModel) -> dict[str, float]:
     return {name: float(values[index]) for index, name in enumerate(FEATURE_NAMES)}
 
 
-def load_model_bundle(artifact_path: Path, metadata_path: Path) -> ModelBundle:
-    """Load a persisted model or fall back to a deterministic demo model."""
+def load_model_bundle(
+    artifact_path: Path,
+    metadata_path: Path,
+    train_if_missing: bool = False,
+) -> ModelBundle:
+    """Load a persisted model, training the baseline first when requested.
+
+    Falls back to the deterministic demo model only when no artifact exists
+    and training is disabled or fails.
+    """
 
     loaded_at = datetime.now(UTC)
     model = _load_joblib_model(artifact_path)
+
+    if model is None and train_if_missing:
+        from app.ml.training import train_baseline_model
+
+        try:
+            train_baseline_model(artifact_path, metadata_path)
+            model = _load_joblib_model(artifact_path)
+            logger.info("Trained baseline model and saved it to %s", artifact_path)
+        except Exception:
+            logger.exception("Baseline training failed; using the rule-based fallback model.")
+
     metadata = _load_metadata(metadata_path)
 
     if model is None:

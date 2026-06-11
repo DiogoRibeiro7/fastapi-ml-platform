@@ -12,10 +12,14 @@ RUN apt-get update \
 
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY scripts ./scripts
 COPY artifacts ./artifacts
 
 RUN pip install --upgrade pip \
     && pip install -e .
+
+# Bake the trained baseline model into the image so startup never falls back.
+RUN python scripts/train_model.py
 
 EXPOSE 8000
 

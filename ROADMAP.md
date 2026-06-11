@@ -17,7 +17,7 @@
 
 ## Stage 2 — ML engineering maturity
 
-- [ ] Replace fallback model with a trained baseline model by default.
+- [x] Replace fallback model with a trained baseline model by default.
 - [ ] Add model registry table.
 - [ ] Add model promotion workflow.
 - [ ] Add model version comparison.
