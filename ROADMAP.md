@@ -19,7 +19,7 @@
 
 - [x] Replace fallback model with a trained baseline model by default.
 - [x] Add model registry table.
-- [ ] Add model promotion workflow.
+- [x] Add model promotion workflow.
 - [ ] Add model version comparison.
 - [ ] Add calibration metrics.
 - [ ] Add SHAP-based explainability.

@@ -21,9 +21,9 @@ async def readiness(request: Request) -> dict[str, Any]:
     async with session_factory() as session:
         await session.execute(text("SELECT 1"))
 
-    model_bundle = request.app.state.model_bundle
+    model_provider = request.app.state.model_provider
     return {
         "status": "ready",
         "database": "ok",
-        "model_version": model_bundle.version,
+        "model_version": model_provider.bundle.version,
     }

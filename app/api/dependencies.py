@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.core.security import validate_api_key
+from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
 from app.services.drift_service import DriftService
@@ -47,23 +48,33 @@ def get_prediction_repository(
     return PredictionRepository(session=session)
 
 
+def get_model_provider(request: Request) -> ModelProvider:
+    """Return the application's live model provider."""
+
+    provider: ModelProvider = request.app.state.model_provider
+    return provider
+
+
 def get_prediction_service(
     request: Request,
     repository: PredictionRepository = Depends(get_prediction_repository),
+    provider: ModelProvider = Depends(get_model_provider),
 ) -> PredictionService:
     """Build the scoring service for a request."""
 
     return PredictionService(
         repository=repository,
-        model_bundle=request.app.state.model_bundle,
+        model_bundle=provider.bundle,
         settings=request.app.state.settings,
     )
 
 
-def get_model_service(request: Request) -> ModelService:
+def get_model_service(
+    provider: ModelProvider = Depends(get_model_provider),
+) -> ModelService:
     """Build the model metadata service."""
 
-    return ModelService(model_bundle=request.app.state.model_bundle)
+    return ModelService(model_bundle=provider.bundle)
 
 
 def get_model_registry_repository(
@@ -76,10 +87,11 @@ def get_model_registry_repository(
 
 def get_model_registry_service(
     repository: ModelRegistryRepository = Depends(get_model_registry_repository),
+    provider: ModelProvider = Depends(get_model_provider),
 ) -> ModelRegistryService:
     """Build the model registry service."""
 
-    return ModelRegistryService(repository=repository)
+    return ModelRegistryService(repository=repository, model_provider=provider)
 
 
 def get_metrics_service(

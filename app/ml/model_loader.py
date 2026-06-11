@@ -165,6 +165,36 @@ def load_model_bundle(
     )
 
 
+def load_registered_bundle(
+    artifact_path: Path,
+    name: str,
+    version: str,
+    metrics: dict[str, Any],
+) -> ModelBundle:
+    """Load a bundle for a registered model from its artifact.
+
+    Unlike load_model_bundle, this never falls back to the rule-based model: a
+    promotion must serve the artifact that was registered, so a missing or
+    invalid artifact raises instead of silently degrading.
+    """
+
+    model = _load_joblib_model(artifact_path)
+    if model is None:
+        raise FileNotFoundError(f"Model artifact not found: {artifact_path}")
+
+    return ModelBundle(
+        model=model,
+        name=name,
+        version=version,
+        model_type=type(model).__name__,
+        features=FEATURE_NAMES,
+        metrics=metrics,
+        loaded_from=str(artifact_path),
+        loaded_at=datetime.now(UTC),
+        coefficients=_extract_coefficients(model),
+    )
+
+
 def fraud_probability(model: ProbabilityModel, feature_array: NDArray[Any]) -> float:
     """Return the positive-class probability from a probability model."""
 

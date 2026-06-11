@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.dependencies import get_model_registry_service, get_model_service, require_api_key
-from app.core.exceptions import DuplicateModelError, ModelNotFoundError
+from app.core.exceptions import DuplicateModelError, ModelNotFoundError, ModelPromotionError
 from app.schemas.model import (
     ModelMetadataResponse,
     ModelRegistrationRequest,
@@ -64,5 +64,10 @@ async def activate_model(
     except ModelNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ModelPromotionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc

@@ -55,7 +55,7 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/v1/models/current` | Show active model metadata. |
 | `GET` | `/v1/models` | List registered models. |
 | `POST` | `/v1/models` | Register a model version. |
-| `POST` | `/v1/models/{model_id}/activate` | Activate one registered model. |
+| `POST` | `/v1/models/{model_id}/activate` | Promote one registered model to active (hot-swaps the served model). |
 | `GET` | `/v1/metrics/model` | Show prediction-count and risk-distribution metrics. |
 | `GET` | `/v1/drift/report` | Show a PSI-based drift report. |
 

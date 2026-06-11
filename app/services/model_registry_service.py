@@ -1,4 +1,8 @@
-from app.core.exceptions import ModelNotFoundError
+from pathlib import Path
+
+from app.core.exceptions import ModelNotFoundError, ModelPromotionError
+from app.ml.model_loader import load_registered_bundle
+from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.schemas.model import (
     ModelRegistrationRequest,
@@ -10,8 +14,13 @@ from app.schemas.model import (
 class ModelRegistryService:
     """Business logic for the model registry."""
 
-    def __init__(self, repository: ModelRegistryRepository) -> None:
+    def __init__(
+        self,
+        repository: ModelRegistryRepository,
+        model_provider: ModelProvider,
+    ) -> None:
         self._repository = repository
+        self._model_provider = model_provider
 
     async def register_model(
         self, request: ModelRegistrationRequest
@@ -36,9 +45,32 @@ class ModelRegistryService:
         )
 
     async def activate_model(self, model_id: int) -> RegisteredModelResponse:
-        """Activate one model; all other models become inactive."""
+        """Promote one model to active and hot-swap the served model.
 
-        row = await self._repository.activate(model_id)
+        The artifact is loaded before the database is updated, so a missing or
+        invalid artifact aborts the promotion and leaves the current model and
+        active flag untouched.
+        """
+
+        row = await self._repository.get_by_id(model_id)
         if row is None:
             raise ModelNotFoundError(f"Registered model not found: {model_id}")
-        return RegisteredModelResponse.model_validate(row)
+
+        try:
+            bundle = load_registered_bundle(
+                artifact_path=Path(row.artifact_path),
+                name=row.name,
+                version=row.version,
+                metrics=row.metrics,
+            )
+        except (FileNotFoundError, TypeError) as exc:
+            raise ModelPromotionError(
+                f"Cannot promote model {row.name} {row.version}: {exc}"
+            ) from exc
+
+        activated = await self._repository.activate(model_id)
+        if activated is None:
+            raise ModelNotFoundError(f"Registered model not found: {model_id}")
+
+        self._model_provider.swap(bundle)
+        return RegisteredModelResponse.model_validate(activated)

@@ -12,3 +12,7 @@ class ModelNotFoundError(LookupError):
 
 class DuplicateModelError(ValueError):
     """Raised when a model name and version pair is already registered."""
+
+
+class ModelPromotionError(RuntimeError):
+    """Raised when a registered model cannot be promoted to active."""
