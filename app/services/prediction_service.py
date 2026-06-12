@@ -1,10 +1,12 @@
 import logging
+import time
 from typing import Any
 
 from numpy.typing import NDArray
 
 from app.core.config import Settings
 from app.core.exceptions import PredictionNotFoundError
+from app.core.metrics import record_prediction
 from app.ml.explainer import top_contributions_from_impacts, top_feature_contributions
 from app.ml.feature_pipeline import build_feature_dict, features_to_array
 from app.ml.model_loader import ModelBundle, fraud_probability
@@ -44,9 +46,14 @@ class PredictionService:
 
         features = build_feature_dict(transaction)
         feature_array = features_to_array(features)
+
+        inference_start = time.perf_counter()
         risk_score = fraud_probability(self._model_bundle.model, feature_array)
+        inference_seconds = time.perf_counter() - inference_start
+
         risk_level = self._risk_level(risk_score)
         decision = self._decision(risk_score)
+        record_prediction(risk_level, decision, inference_seconds)
         top_features = self._explain(features, feature_array)
 
         response = PredictionResponse(

@@ -21,6 +21,7 @@ dependencies = [
     "numpy>=1.26,<3.0",
     "scikit-learn>=1.4,<2.0",
     "joblib>=1.4,<2.0",
+    "prometheus-client>=0.20,<1.0",
 ]
 
 [project.optional-dependencies]

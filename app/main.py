@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.v1.router import api_router
 from app.core.config import Settings
 from app.core.logging import configure_logging
+from app.core.metrics import prometheus_middleware
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
 from app.ml.model_loader import load_model_bundle, load_registered_bundle
 from app.ml.model_provider import ModelProvider
@@ -91,6 +92,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.middleware("http")(prometheus_middleware)
     app.include_router(api_router)
     return app
 

@@ -62,6 +62,7 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/v1/calibration/report` | Show a calibration report (Brier score, ECE, reliability bins). |
 | `POST` | `/v1/threshold/optimize` | Recommend a cost-minimizing decision threshold. |
 | `GET` | `/v1/evaluation/report` | Show a consolidated offline evaluation report. |
+| `GET` | `/metrics` | Expose Prometheus metrics for scraping. |
 
 ## Quick start
 
@@ -180,6 +181,26 @@ python scripts/evaluate_model.py
 ```
 
 This scores the model on a seeded labeled holdout and writes `artifacts/evaluation_report.json`. The same report is available live at `GET /v1/evaluation/report`, where an optional `threshold` query parameter overrides the default decline score.
+
+## Metrics and monitoring
+
+The service exposes Prometheus metrics at `GET /metrics` (unauthenticated, for scraping):
+
+- `http_requests_total{method, endpoint, status_code}` — request counts.
+- `http_request_duration_seconds{method, endpoint}` — request latency histogram.
+- `model_prediction_duration_seconds` — model inference latency, tracked separately from HTTP latency.
+- `model_predictions_total{risk_level, decision}` — scored predictions by outcome.
+
+HTTP metrics are collected in middleware and prediction metrics in the scoring service, so route handlers stay free of instrumentation. The `endpoint` label uses the matched route template (e.g. `/v1/transactions/{transaction_id}`) to keep label cardinality bounded.
+
+Example scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: fraud-api
+    static_configs:
+      - targets: ["localhost:8000"]
+```
 
 ## Run tests
 

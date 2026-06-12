@@ -7,12 +7,14 @@ from app.api.v1.endpoints import (
     health,
     metrics,
     models,
+    observability,
     predictions,
     threshold,
 )
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+api_router.include_router(observability.router)
 api_router.include_router(predictions.router, prefix="/v1", tags=["predictions"])
 api_router.include_router(models.router, prefix="/v1", tags=["models"])
 api_router.include_router(metrics.router, prefix="/v1", tags=["metrics"])
