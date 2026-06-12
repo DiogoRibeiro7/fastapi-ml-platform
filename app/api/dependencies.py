@@ -14,6 +14,7 @@ from app.services.metrics_service import MetricsService
 from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
 from app.services.prediction_service import PredictionService
+from app.services.threshold_service import ThresholdOptimizationService
 
 
 def get_settings(request: Request) -> Settings:
@@ -120,3 +121,11 @@ def get_calibration_service(
     """Build the calibration-report service for the active model."""
 
     return CalibrationService(model_bundle=provider.bundle)
+
+
+def get_threshold_service(
+    provider: ModelProvider = Depends(get_model_provider),
+) -> ThresholdOptimizationService:
+    """Build the threshold-optimization service for the active model."""
+
+    return ThresholdOptimizationService(model_bundle=provider.bundle)

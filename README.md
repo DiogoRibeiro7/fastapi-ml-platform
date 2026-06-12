@@ -60,6 +60,7 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/v1/metrics/model` | Show prediction-count and risk-distribution metrics. |
 | `GET` | `/v1/drift/report` | Show a PSI-based drift report. |
 | `GET` | `/v1/calibration/report` | Show a calibration report (Brier score, ECE, reliability bins). |
+| `POST` | `/v1/threshold/optimize` | Recommend a cost-minimizing decision threshold. |
 
 ## Quick start
 

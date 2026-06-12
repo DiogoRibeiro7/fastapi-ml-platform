@@ -1,8 +1,7 @@
 from datetime import UTC, datetime
 
-import numpy as np
-
 from app.ml.calibration import calibration_report
+from app.ml.holdout import labeled_holdout_scores
 from app.ml.model_loader import ModelBundle
 from app.schemas.calibration import CalibrationBin, CalibrationReportResponse
 
@@ -30,12 +29,9 @@ class CalibrationService:
     def current_report(self) -> CalibrationReportResponse:
         """Score the active model on a labeled holdout and report calibration."""
 
-        from app.ml.training import make_synthetic_dataset
-
-        features, labels = make_synthetic_dataset(
-            n_samples=self._sample_size, seed=self._seed
+        labels, probabilities = labeled_holdout_scores(
+            self._model_bundle, sample_size=self._sample_size, seed=self._seed
         )
-        probabilities = np.asarray(self._model_bundle.model.predict_proba(features))[:, 1]
         report = calibration_report(labels, probabilities, n_bins=self._n_bins)
 
         return CalibrationReportResponse(
