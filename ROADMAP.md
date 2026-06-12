@@ -24,7 +24,7 @@
 - [x] Add calibration metrics.
 - [x] Add SHAP-based explainability.
 - [x] Add threshold optimization by business cost.
-- [ ] Add offline evaluation reports.
+- [x] Add offline evaluation reports.
 
 ## Stage 3 — Production observability
 

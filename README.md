@@ -61,6 +61,7 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/v1/drift/report` | Show a PSI-based drift report. |
 | `GET` | `/v1/calibration/report` | Show a calibration report (Brier score, ECE, reliability bins). |
 | `POST` | `/v1/threshold/optimize` | Recommend a cost-minimizing decision threshold. |
+| `GET` | `/v1/evaluation/report` | Show a consolidated offline evaluation report. |
 
 ## Quick start
 
@@ -169,6 +170,16 @@ ENABLE_SHAP_EXPLANATIONS=true
 The SHAP explainer is built lazily on first use and cached for the lifetime of the active model (and rebuilt after a promotion). If `shap` is not installed or an explanation fails, the service logs it once and falls back to the linear contribution, so enabling the flag is always safe.
 
 **Performance:** SHAP runs a perturbation-based explainer per prediction, which is substantially slower than the linear path (milliseconds vs. microseconds) and adds CPU load proportional to the background sample size. Keep it disabled for high-throughput real-time scoring; enable it for review queues, audits, or offline analysis where per-decision explanations matter more than latency.
+
+## Offline evaluation
+
+Generate a consolidated evaluation report (ranking, calibration, and threshold-based classification metrics) for the current model:
+
+```bash
+python scripts/evaluate_model.py
+```
+
+This scores the model on a seeded labeled holdout and writes `artifacts/evaluation_report.json`. The same report is available live at `GET /v1/evaluation/report`, where an optional `threshold` query parameter overrides the default decline score.
 
 ## Run tests
 

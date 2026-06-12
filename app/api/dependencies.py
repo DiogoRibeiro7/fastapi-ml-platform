@@ -10,6 +10,7 @@ from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
 from app.services.calibration_service import CalibrationService
 from app.services.drift_service import DriftService
+from app.services.evaluation_service import EvaluationService
 from app.services.metrics_service import MetricsService
 from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
@@ -129,3 +130,16 @@ def get_threshold_service(
     """Build the threshold-optimization service for the active model."""
 
     return ThresholdOptimizationService(model_bundle=provider.bundle)
+
+
+def get_evaluation_service(
+    request: Request,
+    provider: ModelProvider = Depends(get_model_provider),
+) -> EvaluationService:
+    """Build the offline-evaluation service for the active model."""
+
+    settings: Settings = request.app.state.settings
+    return EvaluationService(
+        model_bundle=provider.bundle,
+        default_threshold=settings.min_decline_score,
+    )

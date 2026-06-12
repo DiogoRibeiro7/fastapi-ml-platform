@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     calibration,
     drift,
+    evaluation,
     health,
     metrics,
     models,
@@ -18,3 +19,4 @@ api_router.include_router(metrics.router, prefix="/v1", tags=["metrics"])
 api_router.include_router(drift.router, prefix="/v1", tags=["drift"])
 api_router.include_router(calibration.router, prefix="/v1", tags=["calibration"])
 api_router.include_router(threshold.router, prefix="/v1", tags=["threshold"])
+api_router.include_router(evaluation.router, prefix="/v1", tags=["evaluation"])

@@ -1,4 +1,4 @@
-.PHONY: install run test lint format typecheck train docker-up docker-down
+.PHONY: install run test lint format typecheck train evaluate docker-up docker-down
 
 install:
 	python -m pip install -e ".[dev]"
@@ -20,6 +20,9 @@ typecheck:
 
 train:
 	python scripts/train_model.py
+
+evaluate:
+	python scripts/evaluate_model.py
 
 docker-up:
 	docker compose up --build
