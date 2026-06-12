@@ -193,6 +193,10 @@ The service exposes Prometheus metrics at `GET /metrics` (unauthenticated, for s
 
 HTTP metrics are collected in middleware and prediction metrics in the scoring service, so route handlers stay free of instrumentation. The `endpoint` label uses the matched route template (e.g. `/v1/transactions/{transaction_id}`) to keep label cardinality bounded.
 
+### Correlation IDs
+
+Every response carries an `X-Request-ID` header. Send your own to trace a request across services, or let the service generate one. The id is attached to every structured log line as `request_id`, so logs for a single request can be grouped end to end.
+
 Example scrape config:
 
 ```yaml

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.api.v1.router import api_router
 from app.core.config import Settings
+from app.core.correlation import correlation_id_middleware
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
@@ -93,6 +94,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.middleware("http")(prometheus_middleware)
+    # Added last so it is the outermost middleware: the correlation id is set
+    # before request handling and other middleware run.
+    app.middleware("http")(correlation_id_middleware)
     app.include_router(api_router)
     return app
 
