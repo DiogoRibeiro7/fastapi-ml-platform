@@ -197,6 +197,16 @@ HTTP metrics are collected in middleware and prediction metrics in the scoring s
 
 Every response carries an `X-Request-ID` header. Send your own to trace a request across services, or let the service generate one. The id is attached to every structured log line as `request_id`, so logs for a single request can be grouped end to end.
 
+### Audit logs
+
+Security- and governance-relevant actions emit structured audit events on the dedicated `audit` logger, each carrying an `action`, an `outcome`, the `request_id`, and action-specific fields:
+
+- `auth_failed` — a rejected request (missing or invalid API key), with the reason, method, and path.
+- `model_registered` — a new model version was registered.
+- `model_promoted` — a model was activated and hot-swapped into serving.
+
+Routing the `audit` logger to a separate sink (file, SIEM) is a configuration change only, since audit events are already isolated to that logger.
+
 Example scrape config:
 
 ```yaml

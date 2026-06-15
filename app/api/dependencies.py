@@ -1,8 +1,9 @@
 from collections.abc import AsyncIterator
 
-from fastapi import Depends, Header, Request
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import record_audit_event
 from app.core.config import Settings
 from app.core.security import validate_api_key
 from app.ml.model_provider import ModelProvider
@@ -40,7 +41,17 @@ def require_api_key(
     """Require a valid API key for protected endpoints."""
 
     settings = get_settings(request)
-    validate_api_key(provided_key=x_api_key, expected_key=settings.api_key)
+    try:
+        validate_api_key(provided_key=x_api_key, expected_key=settings.api_key)
+    except HTTPException:
+        record_audit_event(
+            "auth_failed",
+            outcome="denied",
+            reason="missing_api_key" if x_api_key is None else "invalid_api_key",
+            method=request.method,
+            path=request.url.path,
+        )
+        raise
 
 
 def get_prediction_repository(

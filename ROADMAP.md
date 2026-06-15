@@ -31,7 +31,7 @@
 - [x] Add Prometheus metrics endpoint.
 - [ ] Add OpenTelemetry tracing.
 - [x] Add request correlation IDs.
-- [ ] Add structured audit logs.
+- [x] Add structured audit logs.
 - [ ] Add latency histograms by endpoint.
 - [ ] Add model-latency metrics.
 

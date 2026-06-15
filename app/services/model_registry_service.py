@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+from app.core.audit import record_audit_event
 from app.core.exceptions import ModelNotFoundError, ModelPromotionError
 from app.ml.model_loader import load_registered_bundle
 from app.ml.model_provider import ModelProvider
@@ -76,6 +77,13 @@ class ModelRegistryService:
             training_dataset=request.training_dataset,
             metrics=request.metrics,
         )
+        record_audit_event(
+            "model_registered",
+            outcome="success",
+            model_id=row.id,
+            model_name=row.name,
+            version=row.version,
+        )
         return RegisteredModelResponse.model_validate(row)
 
     async def list_models(self) -> RegisteredModelListResponse:
@@ -115,6 +123,13 @@ class ModelRegistryService:
             raise ModelNotFoundError(f"Registered model not found: {model_id}")
 
         self._model_provider.swap(bundle)
+        record_audit_event(
+            "model_promoted",
+            outcome="success",
+            model_id=activated.id,
+            model_name=activated.name,
+            version=activated.version,
+        )
         return RegisteredModelResponse.model_validate(activated)
 
     async def compare_models(
