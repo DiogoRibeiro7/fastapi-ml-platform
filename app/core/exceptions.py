@@ -16,3 +16,7 @@ class DuplicateModelError(ValueError):
 
 class ModelPromotionError(RuntimeError):
     """Raised when a registered model cannot be promoted to active."""
+
+
+class JobNotFoundError(LookupError):
+    """Raised when a batch job cannot be found."""

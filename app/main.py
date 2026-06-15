@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.v1.router import api_router
 from app.core.config import Settings
 from app.core.correlation import correlation_id_middleware
+from app.core.jobs import BackgroundJobQueue
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
 from app.core.tracing import configure_tracing
@@ -81,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         )
         app.state.model_provider = model_provider
+        app.state.job_queue = BackgroundJobQueue()
 
         await create_database_tables(engine)
         await _promote_active_registered_model(session_factory, model_provider)

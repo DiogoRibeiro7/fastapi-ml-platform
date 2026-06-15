@@ -50,7 +50,9 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/health` | Basic process health check. |
 | `GET` | `/ready` | Readiness check for database and model availability. |
 | `POST` | `/v1/transactions/score` | Score one transaction. |
-| `POST` | `/v1/transactions/batch-score` | Score many transactions. |
+| `POST` | `/v1/transactions/batch-score` | Score many transactions synchronously. |
+| `POST` | `/v1/transactions/batch-score-jobs` | Submit a batch for asynchronous scoring. |
+| `GET` | `/v1/jobs/{job_id}` | Check a batch job's status and result. |
 | `GET` | `/v1/transactions/{transaction_id}` | Fetch a logged prediction. |
 | `GET` | `/v1/models/current` | Show active model metadata. |
 | `GET` | `/v1/models` | List registered models. |
@@ -181,6 +183,12 @@ python scripts/evaluate_model.py
 ```
 
 This scores the model on a seeded labeled holdout and writes `artifacts/evaluation_report.json`. The same report is available live at `GET /v1/evaluation/report`, where an optional `threshold` query parameter overrides the default decline score.
+
+## Asynchronous batch jobs
+
+Large batches can be scored asynchronously. `POST /v1/transactions/batch-score-jobs` returns `202 Accepted` with a job id, then `GET /v1/jobs/{job_id}` reports the status (`queued`, `running`, `completed`, `failed`), progress, and a result summary. The synchronous `POST /v1/transactions/batch-score` remains for small batches.
+
+Jobs are persisted in the database and processed by an in-process background worker (`asyncio` tasks). The queue is abstracted behind a small interface, so a Redis/RQ or Celery backend can be added without touching the service or endpoints. Set `PROCESS_JOBS_INLINE=true` to run jobs synchronously (used in tests).
 
 ## Metrics and monitoring
 

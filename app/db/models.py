@@ -33,6 +33,22 @@ class PredictionLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
+class BatchJob(Base):
+    """An asynchronous batch-scoring job and its progress."""
+
+    __tablename__ = "batch_jobs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    status: Mapped[str] = mapped_column(String(32), index=True, default="queued")
+    total: Mapped[int] = mapped_column(Integer)
+    completed: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+
+
 class RegisteredModel(Base):
     """A model registered in the model registry."""
 

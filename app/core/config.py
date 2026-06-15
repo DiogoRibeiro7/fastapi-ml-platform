@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     min_review_score: float = Field(default=0.65, ge=0.0, le=1.0)
     min_decline_score: float = Field(default=0.90, ge=0.0, le=1.0)
     max_batch_size: int = Field(default=100, ge=1, le=10_000)
+    process_jobs_inline: bool = Field(default=False)
 
     @field_validator("log_level")
     @classmethod

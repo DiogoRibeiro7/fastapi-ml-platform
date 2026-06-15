@@ -37,7 +37,7 @@
 
 ## Stage 4 — Background processing
 
-- [ ] Add Redis-backed queue.
+- [x] Add async batch job queue (in-process; Redis/RQ backend is a drop-in extension point).
 - [ ] Move drift computation into a background job.
 - [ ] Add async batch ingestion.
 - [ ] Add scheduled model-quality reports.

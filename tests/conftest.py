@@ -26,6 +26,7 @@ def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
         model_artifact_path=tmp_path / "missing_model.joblib",
         model_metadata_path=tmp_path / "missing_metadata.json",
         train_baseline_if_missing=False,
+        process_jobs_inline=True,
     )
     app = create_app(settings=settings)
 

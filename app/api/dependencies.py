@@ -5,10 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit_event
 from app.core.config import Settings
+from app.core.jobs import InlineJobQueue, JobQueue
 from app.core.security import validate_api_key
 from app.ml.model_provider import ModelProvider
+from app.repositories.batch_job_repository import BatchJobRepository
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
+from app.services.batch_job_service import BatchJobService
 from app.services.calibration_service import CalibrationService
 from app.services.drift_service import DriftService
 from app.services.evaluation_service import EvaluationService
@@ -109,6 +112,34 @@ def get_model_registry_service(
     """Build the model registry service."""
 
     return ModelRegistryService(repository=repository, model_provider=provider)
+
+
+def get_batch_job_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> BatchJobRepository:
+    """Build a batch-job repository from the current database session."""
+
+    return BatchJobRepository(session=session)
+
+
+def get_batch_job_service(
+    request: Request,
+    repository: BatchJobRepository = Depends(get_batch_job_repository),
+    provider: ModelProvider = Depends(get_model_provider),
+) -> BatchJobService:
+    """Build the batch-job service, selecting the configured job queue."""
+
+    settings: Settings = request.app.state.settings
+    queue: JobQueue = (
+        InlineJobQueue() if settings.process_jobs_inline else request.app.state.job_queue
+    )
+    return BatchJobService(
+        repository=repository,
+        session_factory=request.app.state.session_factory,
+        model_bundle=provider.bundle,
+        settings=settings,
+        queue=queue,
+    )
 
 
 def get_metrics_service(
