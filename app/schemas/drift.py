@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 DriftSeverity = Literal["none", "low", "medium", "high"]
 
@@ -19,5 +19,20 @@ class DriftReportResponse(BaseModel):
 
     generated_at: datetime
     sample_size: int
+    max_severity: DriftSeverity
     features: list[FeatureDriftResult]
     summary: str
+
+
+class StoredDriftReportResponse(DriftReportResponse):
+    """A drift report persisted in the database."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+
+
+class DriftJobResponse(BaseModel):
+    """Acknowledgement for a scheduled drift-computation job."""
+
+    report_id: str

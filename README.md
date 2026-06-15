@@ -60,7 +60,10 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `POST` | `/v1/models` | Register a model version. |
 | `POST` | `/v1/models/{model_id}/activate` | Promote one registered model to active (hot-swaps the served model). |
 | `GET` | `/v1/metrics/model` | Show prediction-count and risk-distribution metrics. |
-| `GET` | `/v1/drift/report` | Show a PSI-based drift report. |
+| `GET` | `/v1/drift/report` | Show a PSI-based drift report computed on demand. |
+| `POST` | `/v1/drift/jobs` | Schedule a background drift-computation job. |
+| `GET` | `/v1/drift/reports/latest` | Show the latest stored drift report. |
+| `GET` | `/v1/drift/reports/{report_id}` | Show a stored drift report by id. |
 | `GET` | `/v1/calibration/report` | Show a calibration report (Brier score, ECE, reliability bins). |
 | `POST` | `/v1/threshold/optimize` | Recommend a cost-minimizing decision threshold. |
 | `GET` | `/v1/evaluation/report` | Show a consolidated offline evaluation report. |
@@ -189,6 +192,21 @@ This scores the model on a seeded labeled holdout and writes `artifacts/evaluati
 Large batches can be scored asynchronously. `POST /v1/transactions/batch-score-jobs` returns `202 Accepted` with a job id, then `GET /v1/jobs/{job_id}` reports the status (`queued`, `running`, `completed`, `failed`), progress, and a result summary. The synchronous `POST /v1/transactions/batch-score` remains for small batches.
 
 Jobs are persisted in the database and processed by an in-process background worker (`asyncio` tasks). The queue is abstracted behind a small interface, so a Redis/RQ or Celery backend can be added without touching the service or endpoints. Set `PROCESS_JOBS_INLINE=true` to run jobs synchronously (used in tests).
+
+## Drift monitoring
+
+The service reports feature drift using the Population Stability Index (PSI), comparing each feature's recent distribution against a baseline. `GET /v1/drift/report` computes a report on demand; for larger windows, `POST /v1/drift/jobs` runs the computation as a background job and stores the result, retrievable via `GET /v1/drift/reports/latest` or `GET /v1/drift/reports/{report_id}`.
+
+Interpreting PSI per feature (industry-standard thresholds):
+
+| PSI | Severity | Interpretation |
+|---|---|---|
+| `< 0.1` | none | No significant shift; no action needed. |
+| `0.1 – 0.2` | low | Minor shift; worth monitoring. |
+| `0.2 – 0.5` | medium | Material shift; investigate the feature and consider retraining. |
+| `>= 0.5` | high | Large shift; the model is likely operating outside its training distribution. |
+
+The report's `max_severity` is the worst severity across all features, which is a quick signal for alerting.
 
 ## Metrics and monitoring
 

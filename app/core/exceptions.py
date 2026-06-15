@@ -20,3 +20,7 @@ class ModelPromotionError(RuntimeError):
 
 class JobNotFoundError(LookupError):
     """Raised when a batch job cannot be found."""
+
+
+class DriftReportNotFoundError(LookupError):
+    """Raised when a drift report cannot be found."""

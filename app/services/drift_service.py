@@ -48,6 +48,7 @@ class DriftService:
         return DriftReportResponse(
             generated_at=datetime.now(UTC),
             sample_size=len(rows),
+            max_severity=max_severity,  # type: ignore[arg-type]
             features=feature_results,
             summary=summary,
         )

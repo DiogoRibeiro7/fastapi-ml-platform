@@ -49,6 +49,21 @@ class BatchJob(Base):
     error: Mapped[str | None] = mapped_column(String(1024), nullable=True)
 
 
+class DriftReport(Base):
+    """A persisted PSI-based drift report."""
+
+    __tablename__ = "drift_reports"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    generated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, index=True
+    )
+    sample_size: Mapped[int] = mapped_column(Integer)
+    max_severity: Mapped[str] = mapped_column(String(16))
+    summary: Mapped[str] = mapped_column(String(512))
+    features: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
+
+
 class RegisteredModel(Base):
     """A model registered in the model registry."""
 

@@ -9,10 +9,12 @@ from app.core.jobs import InlineJobQueue, JobQueue
 from app.core.security import validate_api_key
 from app.ml.model_provider import ModelProvider
 from app.repositories.batch_job_repository import BatchJobRepository
+from app.repositories.drift_report_repository import DriftReportRepository
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
 from app.services.batch_job_service import BatchJobService
 from app.services.calibration_service import CalibrationService
+from app.services.drift_report_service import DriftReportService
 from app.services.drift_service import DriftService
 from app.services.evaluation_service import EvaluationService
 from app.services.metrics_service import MetricsService
@@ -156,6 +158,31 @@ def get_drift_service(
     """Build the drift-report service."""
 
     return DriftService(repository=repository)
+
+
+def get_drift_report_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> DriftReportRepository:
+    """Build a drift-report repository from the current database session."""
+
+    return DriftReportRepository(session=session)
+
+
+def get_drift_report_service(
+    request: Request,
+    repository: DriftReportRepository = Depends(get_drift_report_repository),
+) -> DriftReportService:
+    """Build the stored-drift-report service, selecting the configured job queue."""
+
+    settings: Settings = request.app.state.settings
+    queue: JobQueue = (
+        InlineJobQueue() if settings.process_jobs_inline else request.app.state.job_queue
+    )
+    return DriftReportService(
+        repository=repository,
+        session_factory=request.app.state.session_factory,
+        queue=queue,
+    )
 
 
 def get_calibration_service(
