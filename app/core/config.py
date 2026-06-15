@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     train_baseline_if_missing: bool = Field(default=True)
     enable_shap_explanations: bool = Field(default=False)
 
+    enable_tracing: bool = Field(default=False)
+    otel_service_name: str = Field(default="fastapi-ml-platform")
+    otel_exporter_otlp_endpoint: str | None = Field(default=None)
+
     min_review_score: float = Field(default=0.65, ge=0.0, le=1.0)
     min_decline_score: float = Field(default=0.90, ge=0.0, le=1.0)
     max_batch_size: int = Field(default=100, ge=1, le=10_000)

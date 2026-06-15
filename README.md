@@ -207,6 +207,22 @@ Security- and governance-relevant actions emit structured audit events on the de
 
 Routing the `audit` logger to a separate sink (file, SIEM) is a configuration change only, since audit events are already isolated to that logger.
 
+### Distributed tracing
+
+OpenTelemetry tracing is optional and disabled by default. Install the extra and enable it:
+
+```bash
+pip install -e ".[tracing]"
+```
+
+```text
+ENABLE_TRACING=true
+OTEL_SERVICE_NAME=fastapi-ml-platform
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318/v1/traces
+```
+
+When enabled, incoming requests are auto-instrumented (one server span per request) and model inference is recorded as a child `model.inference` span. Spans export to the configured OTLP endpoint, or to the console when none is set. All OpenTelemetry imports are lazy, so the dependency is only needed when tracing is on; the inference span is a no-op otherwise.
+
 Example scrape config:
 
 ```yaml

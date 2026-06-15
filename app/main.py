@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.core.correlation import correlation_id_middleware
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
+from app.core.tracing import configure_tracing
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
 from app.ml.model_loader import load_model_bundle, load_registered_bundle
 from app.ml.model_provider import ModelProvider
@@ -92,6 +93,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         description="Production-style FastAPI service for fraud-risk ML inference.",
         lifespan=lifespan,
     )
+
+    if app_settings.enable_tracing:
+        configure_tracing(app, app_settings)
 
     app.middleware("http")(prometheus_middleware)
     # Added last so it is the outermost middleware: the correlation id is set

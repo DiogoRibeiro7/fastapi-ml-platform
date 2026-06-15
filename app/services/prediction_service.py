@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 from app.core.config import Settings
 from app.core.exceptions import PredictionNotFoundError
 from app.core.metrics import record_prediction
+from app.core.tracing import start_span
 from app.ml.explainer import top_contributions_from_impacts, top_feature_contributions
 from app.ml.feature_pipeline import build_feature_dict, features_to_array
 from app.ml.model_loader import ModelBundle, fraud_probability
@@ -48,7 +49,8 @@ class PredictionService:
         feature_array = features_to_array(features)
 
         inference_start = time.perf_counter()
-        risk_score = fraud_probability(self._model_bundle.model, feature_array)
+        with start_span("model.inference"):
+            risk_score = fraud_probability(self._model_bundle.model, feature_array)
         inference_seconds = time.perf_counter() - inference_start
 
         risk_level = self._risk_level(risk_score)

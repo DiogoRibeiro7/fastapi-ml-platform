@@ -29,7 +29,7 @@
 ## Stage 3 — Production observability
 
 - [x] Add Prometheus metrics endpoint.
-- [ ] Add OpenTelemetry tracing.
+- [x] Add OpenTelemetry tracing.
 - [x] Add request correlation IDs.
 - [x] Add structured audit logs.
 - [ ] Add latency histograms by endpoint.
