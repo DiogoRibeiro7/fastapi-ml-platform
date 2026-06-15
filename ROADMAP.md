@@ -32,8 +32,8 @@
 - [x] Add OpenTelemetry tracing.
 - [x] Add request correlation IDs.
 - [x] Add structured audit logs.
-- [ ] Add latency histograms by endpoint.
-- [ ] Add model-latency metrics.
+- [x] Add latency histograms by endpoint. (http_request_duration_seconds)
+- [x] Add model-latency metrics. (model_prediction_duration_seconds)
 
 ## Stage 4 — Background processing
 
