@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     min_decline_score: float = Field(default=0.90, ge=0.0, le=1.0)
     max_batch_size: int = Field(default=100, ge=1, le=10_000)
     process_jobs_inline: bool = Field(default=False)
+    scheduled_report_interval_seconds: int | None = Field(default=None, ge=1)
 
     @field_validator("log_level")
     @classmethod

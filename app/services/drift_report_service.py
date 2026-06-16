@@ -32,6 +32,16 @@ async def _compute_drift_report(
     logger.info("Drift report %s computed (severity=%s).", report_id, report.max_severity)
 
 
+async def run_scheduled_drift_report(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> str:
+    """Compute and store a drift report; used by the periodic scheduler."""
+
+    report_id = uuid4().hex
+    await _compute_drift_report(report_id, session_factory)
+    return report_id
+
+
 class DriftReportService:
     """Schedules drift computation in the background and serves stored reports."""
 

@@ -212,6 +212,8 @@ Interpreting PSI per feature (industry-standard thresholds):
 
 The report's `max_severity` is the worst severity across all features, which is a quick signal for alerting.
 
+Set `SCHEDULED_REPORT_INTERVAL_SECONDS` to have the service generate and store drift reports automatically on that interval (an in-process scheduler started at app startup and stopped on shutdown). Leave it unset to disable scheduling. The latest snapshot is always available at `GET /v1/drift/reports/latest`.
+
 ## Metrics and monitoring
 
 The service exposes Prometheus metrics at `GET /metrics` (unauthenticated, for scraping):

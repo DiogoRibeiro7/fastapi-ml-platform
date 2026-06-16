@@ -40,7 +40,7 @@
 - [x] Add async batch job queue (in-process; Redis/RQ backend is a drop-in extension point).
 - [x] Move drift computation into a background job.
 - [ ] Add async batch ingestion.
-- [ ] Add scheduled model-quality reports.
+- [x] Add scheduled model-quality reports.
 - [x] Add dead-letter handling for failed batch requests.
 
 ## Stage 5 — Security and governance

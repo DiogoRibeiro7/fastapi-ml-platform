@@ -12,11 +12,13 @@ from app.core.correlation import correlation_id_middleware
 from app.core.jobs import BackgroundJobQueue
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
+from app.core.scheduler import PeriodicScheduler
 from app.core.tracing import configure_tracing
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
 from app.ml.model_loader import load_model_bundle, load_registered_bundle
 from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
+from app.services.drift_report_service import run_scheduled_drift_report
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,25 @@ async def _promote_active_registered_model(
     logger.info("Promoted registered model %s on startup.", active.version)
 
 
+def _start_report_scheduler(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> PeriodicScheduler | None:
+    """Start the periodic model-quality report scheduler when configured."""
+
+    interval = settings.scheduled_report_interval_seconds
+    if not interval:
+        return None
+
+    async def scheduled_task() -> None:
+        await run_scheduled_drift_report(session_factory)
+
+    scheduler = PeriodicScheduler(interval, scheduled_task)
+    scheduler.start()
+    logger.info("Scheduled drift reports every %s seconds.", interval)
+    return scheduler
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -86,7 +107,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         await create_database_tables(engine)
         await _promote_active_registered_model(session_factory, model_provider)
+
+        scheduler = _start_report_scheduler(app_settings, session_factory)
+        app.state.report_scheduler = scheduler
+
         yield
+
+        if scheduler is not None:
+            await scheduler.stop()
         await dispose_engine(engine)
 
     app = FastAPI(
