@@ -5,12 +5,17 @@ from uuid import uuid4
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
-from app.core.exceptions import JobNotFoundError
+from app.core.exceptions import DeadLetterNotFoundError, JobNotFoundError
 from app.core.jobs import JobQueue
 from app.ml.model_loader import ModelBundle
 from app.repositories.batch_job_repository import BatchJobRepository
+from app.repositories.dead_letter_repository import DeadLetterRepository
 from app.repositories.prediction_repository import PredictionRepository
-from app.schemas.jobs import BatchJobResponse
+from app.schemas.jobs import (
+    BatchJobResponse,
+    DeadLetterListResponse,
+    DeadLetterResponse,
+)
 from app.schemas.prediction import BatchPredictionRequest, TransactionInput
 from app.services.prediction_service import PredictionService
 
@@ -33,6 +38,7 @@ async def _process_job(
 
     async with session_factory() as session:
         jobs = BatchJobRepository(session)
+        dead_letters = DeadLetterRepository(session)
         predictions = PredictionService(
             repository=PredictionRepository(session),
             model_bundle=model_bundle,
@@ -42,16 +48,35 @@ async def _process_job(
 
         risk_levels: Counter[str] = Counter()
         decisions: Counter[str] = Counter()
+        failed = 0
         try:
             for index, transaction in enumerate(transactions, start=1):
-                response = await predictions.score_transaction(transaction)
-                risk_levels[response.risk_level] += 1
-                decisions[response.decision] += 1
+                try:
+                    response = await predictions.score_transaction(transaction)
+                    risk_levels[response.risk_level] += 1
+                    decisions[response.decision] += 1
+                except Exception as exc:
+                    # Isolate a single bad transaction: dead-letter it and keep going.
+                    failed += 1
+                    logger.warning(
+                        "Dead-lettering transaction %s in job %s: %s",
+                        transaction.resolved_transaction_id,
+                        job_id,
+                        exc,
+                    )
+                    await dead_letters.create(
+                        job_id=job_id,
+                        transaction_id=transaction.resolved_transaction_id,
+                        payload=transaction.model_dump(mode="json"),
+                        error=str(exc),
+                    )
                 await jobs.update_progress(job_id, index)
 
             await jobs.mark_completed(
                 job_id,
                 {
+                    "scored": int(sum(decisions.values())),
+                    "failed": failed,
                     "risk_level_counts": dict(risk_levels),
                     "decision_counts": dict(decisions),
                 },
@@ -68,12 +93,14 @@ class BatchJobService:
         self,
         *,
         repository: BatchJobRepository,
+        dead_letter_repository: DeadLetterRepository,
         session_factory: async_sessionmaker[AsyncSession],
         model_bundle: ModelBundle,
         settings: Settings,
         queue: JobQueue,
     ) -> None:
         self._repository = repository
+        self._dead_letter_repository = dead_letter_repository
         self._session_factory = session_factory
         self._model_bundle = model_bundle
         self._settings = settings
@@ -103,3 +130,24 @@ class BatchJobService:
         if row is None:
             raise JobNotFoundError(f"Job not found: {job_id}")
         return BatchJobResponse.model_validate(row)
+
+    async def list_dead_letters(self, job_id: str) -> DeadLetterListResponse:
+        """Return the dead-lettered transactions for a job."""
+
+        if await self._repository.get(job_id) is None:
+            raise JobNotFoundError(f"Job not found: {job_id}")
+        rows = await self._dead_letter_repository.list_for_job(job_id)
+        return DeadLetterListResponse(
+            job_id=job_id,
+            dead_letters=[DeadLetterResponse.model_validate(row) for row in rows],
+        )
+
+    async def retry_dead_letters(self, job_id: str) -> BatchJobResponse:
+        """Resubmit a job's dead-lettered transactions as a new batch job."""
+
+        rows = await self._dead_letter_repository.list_for_job(job_id)
+        if not rows:
+            raise DeadLetterNotFoundError(f"No dead letters to retry for job: {job_id}")
+
+        transactions = [TransactionInput.model_validate(row.payload) for row in rows]
+        return await self.submit(BatchPredictionRequest(transactions=transactions))

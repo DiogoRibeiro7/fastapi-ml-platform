@@ -41,7 +41,7 @@
 - [x] Move drift computation into a background job.
 - [ ] Add async batch ingestion.
 - [ ] Add scheduled model-quality reports.
-- [ ] Add dead-letter handling for failed batch requests.
+- [x] Add dead-letter handling for failed batch requests.
 
 ## Stage 5 — Security and governance
 

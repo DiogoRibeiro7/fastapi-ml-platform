@@ -64,6 +64,19 @@ class DriftReport(Base):
     features: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
 
 
+class DeadLetter(Base):
+    """A batch transaction that failed scoring, captured for retry."""
+
+    __tablename__ = "dead_letters"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(String(64), index=True)
+    transaction_id: Mapped[str] = mapped_column(String(128))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON)
+    error: Mapped[str] = mapped_column(String(1024))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class RegisteredModel(Base):
     """A model registered in the model registry."""
 

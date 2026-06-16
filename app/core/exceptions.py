@@ -24,3 +24,7 @@ class JobNotFoundError(LookupError):
 
 class DriftReportNotFoundError(LookupError):
     """Raised when a drift report cannot be found."""
+
+
+class DeadLetterNotFoundError(LookupError):
+    """Raised when there are no dead-lettered transactions to act on."""

@@ -9,6 +9,7 @@ from app.core.jobs import InlineJobQueue, JobQueue
 from app.core.security import validate_api_key
 from app.ml.model_provider import ModelProvider
 from app.repositories.batch_job_repository import BatchJobRepository
+from app.repositories.dead_letter_repository import DeadLetterRepository
 from app.repositories.drift_report_repository import DriftReportRepository
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
@@ -124,9 +125,18 @@ def get_batch_job_repository(
     return BatchJobRepository(session=session)
 
 
+def get_dead_letter_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> DeadLetterRepository:
+    """Build a dead-letter repository from the current database session."""
+
+    return DeadLetterRepository(session=session)
+
+
 def get_batch_job_service(
     request: Request,
     repository: BatchJobRepository = Depends(get_batch_job_repository),
+    dead_letter_repository: DeadLetterRepository = Depends(get_dead_letter_repository),
     provider: ModelProvider = Depends(get_model_provider),
 ) -> BatchJobService:
     """Build the batch-job service, selecting the configured job queue."""
@@ -137,6 +147,7 @@ def get_batch_job_service(
     )
     return BatchJobService(
         repository=repository,
+        dead_letter_repository=dead_letter_repository,
         session_factory=request.app.state.session_factory,
         model_bundle=provider.bundle,
         settings=settings,
