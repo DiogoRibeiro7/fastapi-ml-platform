@@ -18,6 +18,7 @@ from app.services.calibration_service import CalibrationService
 from app.services.drift_report_service import DriftReportService
 from app.services.drift_service import DriftService
 from app.services.evaluation_service import EvaluationService
+from app.services.ingestion_service import IngestionService
 from app.services.metrics_service import MetricsService
 from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
@@ -152,6 +153,19 @@ def get_batch_job_service(
         model_bundle=provider.bundle,
         settings=settings,
         queue=queue,
+    )
+
+
+def get_ingestion_service(
+    request: Request,
+    batch_job_service: BatchJobService = Depends(get_batch_job_service),
+) -> IngestionService:
+    """Build the ingestion service for the active request."""
+
+    settings: Settings = request.app.state.settings
+    return IngestionService(
+        batch_job_service=batch_job_service,
+        max_records=settings.max_ingest_records,
     )
 
 

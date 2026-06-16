@@ -1,10 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from app.api.dependencies import get_batch_job_service, require_api_key
-from app.core.exceptions import DeadLetterNotFoundError, JobNotFoundError
+from app.api.dependencies import (
+    get_batch_job_service,
+    get_ingestion_service,
+    require_api_key,
+)
+from app.core.exceptions import (
+    DeadLetterNotFoundError,
+    IngestionError,
+    IngestionTooLargeError,
+    JobNotFoundError,
+)
 from app.schemas.jobs import BatchJobResponse, DeadLetterListResponse
 from app.schemas.prediction import BatchPredictionRequest
 from app.services.batch_job_service import BatchJobService
+from app.services.ingestion_service import IngestionService
 
 router = APIRouter(dependencies=[Depends(require_api_key)])
 
@@ -21,6 +31,35 @@ async def submit_batch_job(
     """Submit a batch of transactions for asynchronous scoring."""
 
     return await service.submit(request)
+
+
+@router.post(
+    "/transactions/ingest",
+    response_model=BatchJobResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def ingest_transactions(
+    request: Request,
+    service: IngestionService = Depends(get_ingestion_service),
+) -> BatchJobResponse:
+    """Ingest a payload of transactions (JSON array or newline-delimited JSON).
+
+    The payload is parsed and submitted as an asynchronous batch-scoring job.
+    """
+
+    raw = await request.body()
+    try:
+        return await service.ingest(raw)
+    except IngestionTooLargeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=str(exc),
+        ) from exc
+    except IngestionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/jobs/{job_id}", response_model=BatchJobResponse)

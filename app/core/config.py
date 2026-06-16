@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     max_batch_size: int = Field(default=100, ge=1, le=10_000)
     process_jobs_inline: bool = Field(default=False)
     scheduled_report_interval_seconds: int | None = Field(default=None, ge=1)
+    max_ingest_records: int = Field(default=10_000, ge=1)
 
     @field_validator("log_level")
     @classmethod

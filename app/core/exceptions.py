@@ -28,3 +28,11 @@ class DriftReportNotFoundError(LookupError):
 
 class DeadLetterNotFoundError(LookupError):
     """Raised when there are no dead-lettered transactions to act on."""
+
+
+class IngestionError(ValueError):
+    """Raised when an ingestion payload cannot be parsed or validated."""
+
+
+class IngestionTooLargeError(ValueError):
+    """Raised when an ingestion payload exceeds the allowed record count."""
