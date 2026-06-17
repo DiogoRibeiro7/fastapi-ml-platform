@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.api.dependencies import (
     get_batch_job_service,
     get_ingestion_service,
-    require_api_key,
+    require_roles,
 )
 from app.core.exceptions import (
     DeadLetterNotFoundError,
@@ -11,12 +11,13 @@ from app.core.exceptions import (
     IngestionTooLargeError,
     JobNotFoundError,
 )
+from app.core.principal import PREDICT_ROLES
 from app.schemas.jobs import BatchJobResponse, DeadLetterListResponse
 from app.schemas.prediction import BatchPredictionRequest
 from app.services.batch_job_service import BatchJobService
 from app.services.ingestion_service import IngestionService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter(dependencies=[Depends(require_roles(*PREDICT_ROLES))])
 
 
 @router.post(

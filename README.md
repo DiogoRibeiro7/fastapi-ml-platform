@@ -71,6 +71,8 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `POST` | `/v1/threshold/optimize` | Recommend a cost-minimizing decision threshold. |
 | `GET` | `/v1/evaluation/report` | Show a consolidated offline evaluation report. |
 | `GET` | `/metrics` | Expose Prometheus metrics for scraping. |
+| `POST` | `/v1/auth/login` | Exchange credentials for a JWT access token. |
+| `POST` | `/v1/auth/users` | Create a user (admin only). |
 
 ## Quick start
 
@@ -216,6 +218,25 @@ Interpreting PSI per feature (industry-standard thresholds):
 The report's `max_severity` is the worst severity across all features, which is a quick signal for alerting.
 
 Set `SCHEDULED_REPORT_INTERVAL_SECONDS` to have the service generate and store drift reports automatically on that interval (an in-process scheduler started at app startup and stopped on shutdown). Leave it unset to disable scheduling. The latest snapshot is always available at `GET /v1/drift/reports/latest`.
+
+## Authentication and roles
+
+The API supports two authentication methods:
+
+- **API key** (`X-API-Key` header) for service-to-service access. It authenticates a `service` principal.
+- **JWT bearer tokens** for users. `POST /v1/auth/login` exchanges a username and password for a token whose claims carry the user's role. Send it as `Authorization: Bearer <token>`.
+
+Passwords are hashed with PBKDF2-HMAC-SHA256. A bootstrap admin (configurable via `BOOTSTRAP_ADMIN_*`) is created on startup so an administrator always exists; admins can create further users with `POST /v1/auth/users`.
+
+Roles and access:
+
+| Role | Predictions & jobs | Model management | Reports & metrics |
+|---|---|---|---|
+| `admin` | yes | yes | yes |
+| `service` | yes | no | yes |
+| `analyst` | no | no | yes |
+
+Model-management endpoints (registering and activating models) require `admin`. Prediction and batch endpoints require `service` or `admin`. Missing credentials return `401`; an authenticated caller without a sufficient role returns `403`. Authentication failures and authorization denials are recorded as audit events.
 
 ## Metrics and monitoring
 

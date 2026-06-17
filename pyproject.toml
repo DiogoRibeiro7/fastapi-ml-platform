@@ -22,6 +22,7 @@ dependencies = [
     "scikit-learn>=1.4,<2.0",
     "joblib>=1.4,<2.0",
     "prometheus-client>=0.20,<1.0",
+    "pyjwt>=2.8,<3.0",
 ]
 
 [project.optional-dependencies]
@@ -59,6 +60,8 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Security", "fastapi.Query"
 [tool.ruff.lint.per-file-ignores]
 # X/y naming follows scikit-learn convention.
 "app/ml/training.py" = ["N806"]
+# Tests use hardcoded credentials and tokens by design.
+"tests/*" = ["S105", "S106"]
 
 [tool.mypy]
 python_version = "3.11"

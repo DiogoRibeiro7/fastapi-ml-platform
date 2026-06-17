@@ -36,3 +36,11 @@ class IngestionError(ValueError):
 
 class IngestionTooLargeError(ValueError):
     """Raised when an ingestion payload exceeds the allowed record count."""
+
+
+class InvalidCredentialsError(Exception):
+    """Raised when login credentials are invalid."""
+
+
+class DuplicateUserError(ValueError):
+    """Raised when creating a user whose username already exists."""

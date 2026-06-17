@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.api.dependencies import get_evaluation_service, require_api_key
+from app.api.dependencies import get_evaluation_service, require_roles
+from app.core.principal import ALL_ROLES
 from app.schemas.evaluation import EvaluationReportResponse
 from app.services.evaluation_service import EvaluationService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter(dependencies=[Depends(require_roles(*ALL_ROLES))])
 
 
 @router.get("/evaluation/report", response_model=EvaluationReportResponse)

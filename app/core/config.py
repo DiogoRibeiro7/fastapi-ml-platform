@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO")
     api_key: str = Field(default="dev-api-key")
 
+    jwt_secret: str = Field(default="dev-jwt-secret-change-me")
+    jwt_algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30, ge=1)
+    bootstrap_admin_username: str | None = Field(default="admin")
+    bootstrap_admin_password: str | None = Field(default="admin-password")
+
     database_url: str = Field(default="sqlite+aiosqlite:///./fraud_api.db")
     model_artifact_path: Path = Field(default=Path("artifacts/fraud_model.joblib"))
     model_metadata_path: Path = Field(default=Path("artifacts/fraud_model_metadata.json"))

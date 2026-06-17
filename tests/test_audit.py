@@ -39,7 +39,7 @@ def test_missing_api_key_emits_audit_event(
     assert auth_events
     event = auth_events[-1]
     assert event.outcome == "denied"
-    assert event.reason == "missing_api_key"
+    assert event.reason == "missing_credentials"
     assert event.path == "/v1/models/current"
 
 
@@ -69,14 +69,14 @@ def test_successful_auth_emits_no_audit_event(
 
 def test_model_registration_emits_audit_event(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     audit_records: list[logging.LogRecord],
 ) -> None:
     """Registering a model should produce a model_registered audit event."""
 
     client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json={
             "name": "fraud-model",
             "version": "v1",
@@ -93,7 +93,7 @@ def test_model_registration_emits_audit_event(
 
 def test_model_promotion_emits_audit_event(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     audit_records: list[logging.LogRecord],
     tmp_path: Path,
 ) -> None:
@@ -103,7 +103,7 @@ def test_model_promotion_emits_audit_event(
     train_baseline_model(artifact, artifact.with_suffix(".json"), n_samples=600)
     registered = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json={
             "name": "fraud-model",
             "version": "v1",
@@ -113,7 +113,7 @@ def test_model_promotion_emits_audit_event(
         },
     ).json()
 
-    client.post(f"/v1/models/{registered['id']}/activate", headers=auth_headers)
+    client.post(f"/v1/models/{registered['id']}/activate", headers=admin_headers)
 
     event = next(r for r in audit_records if r.action == "model_promoted")
     assert event.outcome == "success"

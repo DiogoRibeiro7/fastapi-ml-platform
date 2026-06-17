@@ -30,11 +30,11 @@ def _train_artifact(directory: Path, version: str) -> Path:
 
 def test_register_model_starts_inactive(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Registering a model should persist it as inactive."""
 
-    response = client.post("/v1/models", headers=auth_headers, json=_registration_payload())
+    response = client.post("/v1/models", headers=admin_headers, json=_registration_payload())
 
     assert response.status_code == 201
     payload = response.json()
@@ -46,26 +46,26 @@ def test_register_model_starts_inactive(
 
 def test_register_duplicate_version_conflicts(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Registering the same name and version twice should return 409."""
 
-    client.post("/v1/models", headers=auth_headers, json=_registration_payload())
-    response = client.post("/v1/models", headers=auth_headers, json=_registration_payload())
+    client.post("/v1/models", headers=admin_headers, json=_registration_payload())
+    response = client.post("/v1/models", headers=admin_headers, json=_registration_payload())
 
     assert response.status_code == 409
 
 
 def test_list_models_returns_registered_models(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """The list endpoint should return every registered model."""
 
-    client.post("/v1/models", headers=auth_headers, json=_registration_payload("v1"))
-    client.post("/v1/models", headers=auth_headers, json=_registration_payload("v2"))
+    client.post("/v1/models", headers=admin_headers, json=_registration_payload("v1"))
+    client.post("/v1/models", headers=admin_headers, json=_registration_payload("v2"))
 
-    response = client.get("/v1/models", headers=auth_headers)
+    response = client.get("/v1/models", headers=admin_headers)
 
     assert response.status_code == 200
     versions = {model["version"] for model in response.json()["models"]}
@@ -74,7 +74,7 @@ def test_list_models_returns_registered_models(
 
 def test_activate_model_is_exclusive(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     tmp_path: Path,
 ) -> None:
     """Activating a model should deactivate any previously active model."""
@@ -82,45 +82,45 @@ def test_activate_model_is_exclusive(
     path_v1 = _train_artifact(tmp_path, "v1")
     path_v2 = _train_artifact(tmp_path, "v2")
     first = client.post(
-        "/v1/models", headers=auth_headers, json=_registration_payload("v1", str(path_v1))
+        "/v1/models", headers=admin_headers, json=_registration_payload("v1", str(path_v1))
     ).json()
     second = client.post(
-        "/v1/models", headers=auth_headers, json=_registration_payload("v2", str(path_v2))
+        "/v1/models", headers=admin_headers, json=_registration_payload("v2", str(path_v2))
     ).json()
 
-    response = client.post(f"/v1/models/{first['id']}/activate", headers=auth_headers)
+    response = client.post(f"/v1/models/{first['id']}/activate", headers=admin_headers)
     assert response.status_code == 200
     assert response.json()["is_active"] is True
 
-    response = client.post(f"/v1/models/{second['id']}/activate", headers=auth_headers)
+    response = client.post(f"/v1/models/{second['id']}/activate", headers=admin_headers)
     assert response.status_code == 200
 
-    models = client.get("/v1/models", headers=auth_headers).json()["models"]
+    models = client.get("/v1/models", headers=admin_headers).json()["models"]
     active_ids = [model["id"] for model in models if model["is_active"]]
     assert active_ids == [second["id"]]
 
 
 def test_activation_hot_swaps_served_model(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
     tmp_path: Path,
 ) -> None:
     """Promoting a model should change the model served by the API."""
 
     # The default served model is the rule-based fallback.
-    current = client.get("/v1/models/current", headers=auth_headers).json()
+    current = client.get("/v1/models/current", headers=admin_headers).json()
     assert current["version"] == "rule-based-v1"
 
     artifact = _train_artifact(tmp_path, "v1")
     registered = client.post(
-        "/v1/models", headers=auth_headers, json=_registration_payload("v1", str(artifact))
+        "/v1/models", headers=admin_headers, json=_registration_payload("v1", str(artifact))
     ).json()
 
-    activate = client.post(f"/v1/models/{registered['id']}/activate", headers=auth_headers)
+    activate = client.post(f"/v1/models/{registered['id']}/activate", headers=admin_headers)
     assert activate.status_code == 200
 
     # The served model identity comes from the registry row, not the artifact.
-    current = client.get("/v1/models/current", headers=auth_headers).json()
+    current = client.get("/v1/models/current", headers=admin_headers).json()
     assert current["version"] == "v1"
     assert current["name"] == "fraud-model"
     ready = client.get("/ready")
@@ -129,45 +129,45 @@ def test_activation_hot_swaps_served_model(
 
 def test_activate_missing_artifact_returns_422(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Promoting a model whose artifact cannot be loaded should return 422."""
 
     registered = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json=_registration_payload("v1", "artifacts/does_not_exist.joblib"),
     ).json()
 
-    response = client.post(f"/v1/models/{registered['id']}/activate", headers=auth_headers)
+    response = client.post(f"/v1/models/{registered['id']}/activate", headers=admin_headers)
 
     assert response.status_code == 422
 
     # The failed promotion must not flip the active flag.
-    models = client.get("/v1/models", headers=auth_headers).json()["models"]
+    models = client.get("/v1/models", headers=admin_headers).json()["models"]
     assert all(model["is_active"] is False for model in models)
 
 
 def test_compare_models_reports_metric_deltas(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Comparison should return per-metric values and deltas for both models."""
 
     baseline = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json=_registration_payload("v1", metrics={"roc_auc": 0.90, "average_precision": 0.70}),
     ).json()
     candidate = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json=_registration_payload("v2", metrics={"roc_auc": 0.93, "average_precision": 0.68}),
     ).json()
 
     response = client.get(
         "/v1/models/compare",
-        headers=auth_headers,
+        headers=admin_headers,
         params={"baseline_id": baseline["id"], "candidate_id": candidate["id"]},
     )
 
@@ -183,24 +183,24 @@ def test_compare_models_reports_metric_deltas(
 
 def test_compare_models_handles_missing_and_non_numeric_metrics(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Metrics in only one model, or non-numeric, should have a null delta."""
 
     baseline = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json=_registration_payload("v1", metrics={"roc_auc": 0.90, "note": "baseline"}),
     ).json()
     candidate = client.post(
         "/v1/models",
-        headers=auth_headers,
+        headers=admin_headers,
         json=_registration_payload("v2", metrics={"recall": 0.55, "note": "candidate"}),
     ).json()
 
     response = client.get(
         "/v1/models/compare",
-        headers=auth_headers,
+        headers=admin_headers,
         params={"baseline_id": baseline["id"], "candidate_id": candidate["id"]},
     )
 
@@ -224,17 +224,17 @@ def test_compare_models_handles_missing_and_non_numeric_metrics(
 
 def test_compare_unknown_model_returns_404(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Comparing against a nonexistent model id should return 404."""
 
     existing = client.post(
-        "/v1/models", headers=auth_headers, json=_registration_payload("v1")
+        "/v1/models", headers=admin_headers, json=_registration_payload("v1")
     ).json()
 
     response = client.get(
         "/v1/models/compare",
-        headers=auth_headers,
+        headers=admin_headers,
         params={"baseline_id": existing["id"], "candidate_id": 9999},
     )
 
@@ -243,22 +243,22 @@ def test_compare_unknown_model_returns_404(
 
 def test_activate_unknown_model_returns_404(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """Activating a nonexistent model id should return 404."""
 
-    response = client.post("/v1/models/9999/activate", headers=auth_headers)
+    response = client.post("/v1/models/9999/activate", headers=admin_headers)
 
     assert response.status_code == 404
 
 
 def test_current_model_endpoint_is_preserved(
     client: TestClient,
-    auth_headers: dict[str, str],
+    admin_headers: dict[str, str],
 ) -> None:
     """The registry endpoints must not break /v1/models/current."""
 
-    response = client.get("/v1/models/current", headers=auth_headers)
+    response = client.get("/v1/models/current", headers=admin_headers)
 
     assert response.status_code == 200
     assert response.json()["version"] == "rule-based-v1"

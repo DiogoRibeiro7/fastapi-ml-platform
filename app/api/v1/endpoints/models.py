@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_model_registry_service, get_model_service, require_api_key
+from app.api.dependencies import get_model_registry_service, get_model_service, require_roles
 from app.core.exceptions import DuplicateModelError, ModelNotFoundError, ModelPromotionError
+from app.core.principal import ADMIN_ROLES, ALL_ROLES
 from app.schemas.model import (
     ModelComparisonResponse,
     ModelMetadataResponse,
@@ -12,10 +13,14 @@ from app.schemas.model import (
 from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+# Reads are open to any authenticated caller; mutations require an admin.
+read_access = Depends(require_roles(*ALL_ROLES))
+admin_access = Depends(require_roles(*ADMIN_ROLES))
+
+router = APIRouter()
 
 
-@router.get("/models/current", response_model=ModelMetadataResponse)
+@router.get("/models/current", response_model=ModelMetadataResponse, dependencies=[read_access])
 async def get_current_model(
     service: ModelService = Depends(get_model_service),
 ) -> ModelMetadataResponse:
@@ -24,7 +29,7 @@ async def get_current_model(
     return service.current_model()
 
 
-@router.get("/models", response_model=RegisteredModelListResponse)
+@router.get("/models", response_model=RegisteredModelListResponse, dependencies=[read_access])
 async def list_models(
     service: ModelRegistryService = Depends(get_model_registry_service),
 ) -> RegisteredModelListResponse:
@@ -33,7 +38,7 @@ async def list_models(
     return await service.list_models()
 
 
-@router.get("/models/compare", response_model=ModelComparisonResponse)
+@router.get("/models/compare", response_model=ModelComparisonResponse, dependencies=[read_access])
 async def compare_models(
     baseline_id: int,
     candidate_id: int,
@@ -54,6 +59,7 @@ async def compare_models(
     "/models",
     response_model=RegisteredModelResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[admin_access],
 )
 async def register_model(
     request: ModelRegistrationRequest,
@@ -70,7 +76,11 @@ async def register_model(
         ) from exc
 
 
-@router.post("/models/{model_id}/activate", response_model=RegisteredModelResponse)
+@router.post(
+    "/models/{model_id}/activate",
+    response_model=RegisteredModelResponse,
+    dependencies=[admin_access],
+)
 async def activate_model(
     model_id: int,
     service: ModelRegistryService = Depends(get_model_registry_service),

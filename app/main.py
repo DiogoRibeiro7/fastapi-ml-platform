@@ -18,6 +18,8 @@ from app.db.session import build_session_factory, create_database_tables, dispos
 from app.ml.model_loader import load_model_bundle, load_registered_bundle
 from app.ml.model_provider import ModelProvider
 from app.repositories.model_registry_repository import ModelRegistryRepository
+from app.repositories.user_repository import UserRepository
+from app.services.auth_service import AuthService
 from app.services.drift_report_service import run_scheduled_drift_report
 
 logger = logging.getLogger(__name__)
@@ -56,6 +58,23 @@ async def _promote_active_registered_model(
 
     model_provider.swap(bundle)
     logger.info("Promoted registered model %s on startup.", active.version)
+
+
+async def _bootstrap_admin_user(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    """Create the bootstrap admin user on startup if configured and absent."""
+
+    username = settings.bootstrap_admin_username
+    password = settings.bootstrap_admin_password
+    if not username or not password:
+        return
+
+    async with session_factory() as session:
+        await AuthService(UserRepository(session), settings).ensure_user(
+            username, password, "admin"
+        )
 
 
 def _start_report_scheduler(
@@ -106,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.job_queue = BackgroundJobQueue()
 
         await create_database_tables(engine)
+        await _bootstrap_admin_user(app_settings, session_factory)
         await _promote_active_registered_model(session_factory, model_provider)
 
         scheduler = _start_report_scheduler(app_settings, session_factory)

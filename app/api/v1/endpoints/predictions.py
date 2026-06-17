@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.dependencies import get_prediction_service, require_api_key
+from app.api.dependencies import get_prediction_service, require_roles
 from app.core.exceptions import PredictionNotFoundError
+from app.core.principal import PREDICT_ROLES
 from app.schemas.prediction import (
     BatchPredictionRequest,
     BatchPredictionResponse,
@@ -10,7 +11,7 @@ from app.schemas.prediction import (
 )
 from app.services.prediction_service import PredictionService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter(dependencies=[Depends(require_roles(*PREDICT_ROLES))])
 
 
 @router.post(

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    auth,
     calibration,
     drift,
     evaluation,
@@ -16,6 +17,7 @@ from app.api.v1.endpoints import (
 api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(observability.router)
+api_router.include_router(auth.router, prefix="/v1", tags=["auth"])
 api_router.include_router(predictions.router, prefix="/v1", tags=["predictions"])
 api_router.include_router(jobs.router, prefix="/v1", tags=["jobs"])
 api_router.include_router(models.router, prefix="/v1", tags=["models"])

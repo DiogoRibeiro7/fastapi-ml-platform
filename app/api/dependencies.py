@@ -1,18 +1,22 @@
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import record_audit_event
 from app.core.config import Settings
 from app.core.jobs import InlineJobQueue, JobQueue
+from app.core.principal import ALL_ROLES, Principal, Role
 from app.core.security import validate_api_key
+from app.core.tokens import TokenError, decode_access_token
 from app.ml.model_provider import ModelProvider
 from app.repositories.batch_job_repository import BatchJobRepository
 from app.repositories.dead_letter_repository import DeadLetterRepository
 from app.repositories.drift_report_repository import DriftReportRepository
 from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
+from app.repositories.user_repository import UserRepository
+from app.services.auth_service import AuthService
 from app.services.batch_job_service import BatchJobService
 from app.services.calibration_service import CalibrationService
 from app.services.drift_report_service import DriftReportService
@@ -41,24 +45,112 @@ async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
         yield session
 
 
-def require_api_key(
+def _resolve_principal(
     request: Request,
-    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
-) -> None:
-    """Require a valid API key for protected endpoints."""
+    x_api_key: str | None,
+    authorization: str | None,
+) -> Principal:
+    """Resolve the caller from an API key or a JWT bearer token.
+
+    A valid API key authenticates a service account; a valid JWT authenticates
+    a user with the role embedded in its claims. Failures emit an audit event.
+    """
 
     settings = get_settings(request)
-    try:
-        validate_api_key(provided_key=x_api_key, expected_key=settings.api_key)
-    except HTTPException:
-        record_audit_event(
-            "auth_failed",
-            outcome="denied",
-            reason="missing_api_key" if x_api_key is None else "invalid_api_key",
-            method=request.method,
-            path=request.url.path,
-        )
-        raise
+
+    if x_api_key is not None:
+        try:
+            validate_api_key(provided_key=x_api_key, expected_key=settings.api_key)
+        except HTTPException:
+            record_audit_event(
+                "auth_failed",
+                outcome="denied",
+                reason="invalid_api_key",
+                method=request.method,
+                path=request.url.path,
+            )
+            raise
+        return Principal(identity="service-account", role="service", auth="api_key")
+
+    if authorization is not None and authorization.lower().startswith("bearer "):
+        token = authorization[len("bearer ") :].strip()
+        try:
+            payload = decode_access_token(
+                token, secret=settings.jwt_secret, algorithm=settings.jwt_algorithm
+            )
+        except TokenError as exc:
+            record_audit_event(
+                "auth_failed",
+                outcome="denied",
+                reason="invalid_token",
+                method=request.method,
+                path=request.url.path,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+            ) from exc
+
+        role = payload.get("role")
+        subject = payload.get("sub")
+        if role not in ALL_ROLES or not subject:
+            record_audit_event(
+                "auth_failed",
+                outcome="denied",
+                reason="invalid_token_claims",
+                method=request.method,
+                path=request.url.path,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token claims."
+            )
+        return Principal(identity=subject, role=role, auth="jwt")
+
+    record_audit_event(
+        "auth_failed",
+        outcome="denied",
+        reason="missing_credentials",
+        method=request.method,
+        path=request.url.path,
+    )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required."
+    )
+
+
+def require_roles(*allowed_roles: Role) -> Callable[..., Principal]:
+    """Build a dependency that authenticates the caller and checks its role."""
+
+    def dependency(
+        request: Request,
+        x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+        authorization: str | None = Header(default=None),
+    ) -> Principal:
+        principal = _resolve_principal(request, x_api_key, authorization)
+        if principal.role not in allowed_roles:
+            record_audit_event(
+                "authz_denied",
+                outcome="denied",
+                identity=principal.identity,
+                role=principal.role,
+                method=request.method,
+                path=request.url.path,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient role for this operation.",
+            )
+        return principal
+
+    return dependency
+
+
+def get_auth_service(
+    request: Request,
+    session: AsyncSession = Depends(get_db_session),
+) -> AuthService:
+    """Build the authentication service for the current request."""
+
+    return AuthService(UserRepository(session), request.app.state.settings)
 
 
 def get_prediction_repository(

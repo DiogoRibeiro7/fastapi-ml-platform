@@ -45,8 +45,8 @@
 
 ## Stage 5 — Security and governance
 
-- [ ] Add JWT auth.
-- [ ] Add role-based access control.
+- [x] Add JWT auth.
+- [x] Add role-based access control.
 - [ ] Add per-client rate limits.
 - [ ] Add request-size limits.
 - [ ] Add data-retention policies.

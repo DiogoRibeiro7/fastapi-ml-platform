@@ -64,6 +64,18 @@ class DriftReport(Base):
     features: Mapped[list[dict[str, Any]]] = mapped_column(JSON)
 
 
+class User(Base):
+    """An application user with a role for access control."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(128), unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column(String(256))
+    role: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
 class DeadLetter(Base):
     """A batch transaction that failed scoring, captured for retry."""
 

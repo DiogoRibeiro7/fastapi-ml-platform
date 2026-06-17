@@ -15,6 +15,10 @@ def api_key() -> str:
     return "test-api-key"
 
 
+ADMIN_USERNAME = "admin"
+ADMIN_PASSWORD = "admin-password"
+
+
 @pytest.fixture()
 def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
     """Create a test client with an isolated SQLite database."""
@@ -27,6 +31,9 @@ def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
         model_metadata_path=tmp_path / "missing_metadata.json",
         train_baseline_if_missing=False,
         process_jobs_inline=True,
+        jwt_secret="test-jwt-secret",
+        bootstrap_admin_username=ADMIN_USERNAME,
+        bootstrap_admin_password=ADMIN_PASSWORD,
     )
     app = create_app(settings=settings)
 
@@ -36,9 +43,21 @@ def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
 
 @pytest.fixture()
 def auth_headers(api_key: str) -> dict[str, str]:
-    """Return authentication headers for protected endpoints."""
+    """Return API-key headers (service role) for protected endpoints."""
 
     return {"X-API-Key": api_key}
+
+
+@pytest.fixture()
+def admin_headers(client: TestClient) -> dict[str, str]:
+    """Log in as the bootstrap admin and return bearer-token headers."""
+
+    response = client.post(
+        "/v1/auth/login",
+        json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture()

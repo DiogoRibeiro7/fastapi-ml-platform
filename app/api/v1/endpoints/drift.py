@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.dependencies import (
     get_drift_report_service,
     get_drift_service,
-    require_api_key,
+    require_roles,
 )
 from app.core.exceptions import DriftReportNotFoundError
+from app.core.principal import ALL_ROLES
 from app.schemas.drift import (
     DriftJobResponse,
     DriftReportResponse,
@@ -14,7 +15,7 @@ from app.schemas.drift import (
 from app.services.drift_report_service import DriftReportService
 from app.services.drift_service import DriftService
 
-router = APIRouter(dependencies=[Depends(require_api_key)])
+router = APIRouter(dependencies=[Depends(require_roles(*ALL_ROLES))])
 
 
 @router.get("/drift/report", response_model=DriftReportResponse)
