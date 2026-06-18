@@ -150,6 +150,12 @@ This starts:
 - PostgreSQL on port `5432`.
 - Redis on port `6379` for future background workers.
 
+## Configuration profiles
+
+`APP_ENV` selects the environment profile: `development` (default), `staging`, or `production`. Example profiles are provided as [.env.staging.example](.env.staging.example) and [.env.production.example](.env.production.example) — copy one to `.env` or inject the values as environment variables.
+
+In `production`, startup **fails fast** if `API_KEY`, `JWT_SECRET`, or `BOOTSTRAP_ADMIN_PASSWORD` is left at its insecure development default, so a misconfigured deployment cannot start with shipped secrets.
+
 ## Deployment
 
 A practical, production-shaped deployment walkthrough for AWS ECS Fargate (architecture, required services, environment variables, image build/push, migration strategy, and monitoring) is in [docs/deployment/aws-ecs.md](docs/deployment/aws-ecs.md).

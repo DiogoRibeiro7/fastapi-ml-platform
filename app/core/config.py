@@ -1,8 +1,16 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+Environment = Literal["development", "staging", "production"]
+
+# Insecure development defaults that must be overridden in production.
+_DEFAULT_API_KEY = "dev-api-key"
+_DEFAULT_JWT_SECRET = "dev-jwt-secret-change-me"  # noqa: S105 - placeholder, rejected in prod
+_DEFAULT_ADMIN_PASSWORD = "admin-password"  # noqa: S105 - placeholder, rejected in prod
 
 
 class Settings(BaseSettings):
@@ -16,15 +24,15 @@ class Settings(BaseSettings):
     )
 
     app_name: str = Field(default="FastAPI ML Platform")
-    app_env: str = Field(default="development")
+    app_env: Environment = Field(default="development")
     log_level: str = Field(default="INFO")
-    api_key: str = Field(default="dev-api-key")
+    api_key: str = Field(default=_DEFAULT_API_KEY)
 
-    jwt_secret: str = Field(default="dev-jwt-secret-change-me")
+    jwt_secret: str = Field(default=_DEFAULT_JWT_SECRET)
     jwt_algorithm: str = Field(default="HS256")
     access_token_expire_minutes: int = Field(default=30, ge=1)
     bootstrap_admin_username: str | None = Field(default="admin")
-    bootstrap_admin_password: str | None = Field(default="admin-password")
+    bootstrap_admin_password: str | None = Field(default=_DEFAULT_ADMIN_PASSWORD)
 
     database_url: str = Field(default="sqlite+aiosqlite:///./fraud_api.db")
     model_artifact_path: Path = Field(default=Path("artifacts/fraud_model.joblib"))
@@ -54,6 +62,28 @@ class Settings(BaseSettings):
         """Normalize log-level values to the form expected by logging."""
 
         return value.upper()
+
+    @model_validator(mode="after")
+    def enforce_production_hardening(self) -> "Settings":
+        """Reject insecure development defaults when running in production."""
+
+        if self.app_env != "production":
+            return self
+
+        insecure = []
+        if self.api_key == _DEFAULT_API_KEY:
+            insecure.append("API_KEY")
+        if self.jwt_secret == _DEFAULT_JWT_SECRET:
+            insecure.append("JWT_SECRET")
+        if self.bootstrap_admin_password == _DEFAULT_ADMIN_PASSWORD:
+            insecure.append("BOOTSTRAP_ADMIN_PASSWORD")
+
+        if insecure:
+            raise ValueError(
+                "Insecure default values are not allowed when APP_ENV=production: "
+                + ", ".join(insecure)
+            )
+        return self
 
 
 @lru_cache(maxsize=1)
