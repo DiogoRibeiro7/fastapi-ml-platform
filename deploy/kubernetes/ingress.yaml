@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fraud-api
+  labels:
+    app: fraud-api
+  annotations:
+    # Configure TLS and the ingress class for your controller.
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - fraud-api.example.com
+      secretName: fraud-api-tls
+  rules:
+    - host: fraud-api.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fraud-api
+                port:
+                  number: 80

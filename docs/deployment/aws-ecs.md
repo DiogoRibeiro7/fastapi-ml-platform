@@ -2,7 +2,7 @@
 
 This guide describes a practical, production-shaped deployment of the FastAPI ML platform on AWS ECS Fargate. It is intentionally concise; adapt names, sizes, and account-specific values to your environment.
 
-An example Terraform module that provisions this stack (ECR, ECS, RDS, ALB, secrets, IAM) lives in [`deploy/terraform/`](../../deploy/terraform/).
+An example Terraform module that provisions this stack (ECR, ECS, RDS, ALB, secrets, IAM) lives in [`deploy/terraform/`](../../deploy/terraform/). Optional Kubernetes manifests for an equivalent deployment are in [`deploy/kubernetes/`](../../deploy/kubernetes/).
 
 ## Architecture overview
 

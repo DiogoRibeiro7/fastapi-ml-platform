@@ -1,0 +1,23 @@
+# Optional: only enable horizontal autoscaling once the in-process scheduler
+# has been moved out of the API pods (see deployment.yaml). Otherwise scaling
+# would run the scheduler on every replica.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fraud-api
+  labels:
+    app: fraud-api
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fraud-api
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
