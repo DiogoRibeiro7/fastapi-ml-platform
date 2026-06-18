@@ -148,7 +148,8 @@ This starts:
 
 - FastAPI app on port `8000`.
 - PostgreSQL on port `5432`.
-- Redis on port `6379` for future background workers.
+- Redis on port `6379`.
+- An RQ worker processing batch-scoring jobs (the compose stack runs with `JOB_BACKEND=redis`).
 
 ## Configuration profiles
 
@@ -207,7 +208,10 @@ This scores the model on a seeded labeled holdout and writes `artifacts/evaluati
 
 Large batches can be scored asynchronously. `POST /v1/transactions/batch-score-jobs` returns `202 Accepted` with a job id, then `GET /v1/jobs/{job_id}` reports the status (`queued`, `running`, `completed`, `failed`), progress, and a result summary. The synchronous `POST /v1/transactions/batch-score` remains for small batches.
 
-Jobs are persisted in the database and processed by an in-process background worker (`asyncio` tasks). The queue is abstracted behind a small interface, so a Redis/RQ or Celery backend can be added without touching the service or endpoints. Set `PROCESS_JOBS_INLINE=true` to run jobs synchronously (used in tests).
+Jobs are persisted in the database and processed by a configurable backend (`JOB_BACKEND`):
+
+- `inprocess` (default) — an in-process `asyncio` worker. Set `PROCESS_JOBS_INLINE=true` to run jobs synchronously (used in tests).
+- `redis` — batch jobs are enqueued to Redis via [RQ](https://python-rq.org/) and executed by a separate worker process, so scoring scales independently of the API. Install the extra (`pip install -e ".[queue]"`), set `REDIS_URL`, and run a worker with `make worker` (or `python scripts/run_worker.py`). The worker rebuilds its own database session and model from settings; dead-letter handling and result reporting are identical to the in-process backend.
 
 For bulk ingestion from a file or stream, `POST /v1/transactions/ingest` accepts a raw payload — a JSON array, a single JSON object, or newline-delimited JSON (one transaction per line) — parses and validates it, and submits it as a batch job. Payloads above `MAX_INGEST_RECORDS` are rejected with `413`; malformed or invalid payloads return `422`.
 

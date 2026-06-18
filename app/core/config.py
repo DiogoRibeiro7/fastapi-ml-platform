@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     min_decline_score: float = Field(default=0.90, ge=0.0, le=1.0)
     max_batch_size: int = Field(default=100, ge=1, le=10_000)
     process_jobs_inline: bool = Field(default=False)
+    job_backend: Literal["inprocess", "redis"] = Field(default="inprocess")
+    redis_url: str = Field(default="redis://localhost:6379/0")
     scheduled_report_interval_seconds: int | None = Field(default=None, ge=1)
     data_retention_days: int | None = Field(default=None, ge=1)
     retention_cleanup_interval_seconds: int | None = Field(default=None, ge=1)

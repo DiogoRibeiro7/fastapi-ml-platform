@@ -7,6 +7,7 @@ from app.core.audit import record_audit_event
 from app.core.config import Settings
 from app.core.jobs import InlineJobQueue, JobQueue
 from app.core.principal import ALL_ROLES, Principal, Role
+from app.core.redis_queue import RedisBatchDispatcher
 from app.core.security import validate_api_key
 from app.core.tokens import TokenError, decode_access_token
 from app.ml.model_provider import ModelProvider
@@ -17,7 +18,11 @@ from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.prediction_repository import PredictionRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
-from app.services.batch_job_service import BatchJobService
+from app.services.batch_job_service import (
+    BatchJobDispatcher,
+    BatchJobService,
+    InProcessBatchDispatcher,
+)
 from app.services.calibration_service import CalibrationService
 from app.services.drift_report_service import DriftReportService
 from app.services.drift_service import DriftService
@@ -233,19 +238,28 @@ def get_batch_job_service(
     dead_letter_repository: DeadLetterRepository = Depends(get_dead_letter_repository),
     provider: ModelProvider = Depends(get_model_provider),
 ) -> BatchJobService:
-    """Build the batch-job service, selecting the configured job queue."""
+    """Build the batch-job service, selecting the configured job backend."""
 
     settings: Settings = request.app.state.settings
-    queue: JobQueue = (
-        InlineJobQueue() if settings.process_jobs_inline else request.app.state.job_queue
-    )
+
+    dispatcher: BatchJobDispatcher
+    if settings.job_backend == "redis":
+        dispatcher = RedisBatchDispatcher(request.app.state.rq_queue, settings)
+    else:
+        queue: JobQueue = (
+            InlineJobQueue() if settings.process_jobs_inline else request.app.state.job_queue
+        )
+        dispatcher = InProcessBatchDispatcher(
+            session_factory=request.app.state.session_factory,
+            model_bundle=provider.bundle,
+            settings=settings,
+            queue=queue,
+        )
+
     return BatchJobService(
         repository=repository,
         dead_letter_repository=dead_letter_repository,
-        session_factory=request.app.state.session_factory,
-        model_bundle=provider.bundle,
-        settings=settings,
-        queue=queue,
+        dispatcher=dispatcher,
     )
 
 

@@ -3,13 +3,25 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
+    environment: &app-env
       APP_ENV: development
       LOG_LEVEL: INFO
       API_KEY: dev-api-key
       DATABASE_URL: postgresql+asyncpg://fraud:fraud@postgres:5432/fraud
       MODEL_ARTIFACT_PATH: artifacts/fraud_model.joblib
       MODEL_METADATA_PATH: artifacts/fraud_model_metadata.json
+      JOB_BACKEND: redis
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build: .
+    command: ["python", "scripts/run_worker.py"]
+    environment: *app-env
     depends_on:
       postgres:
         condition: service_healthy

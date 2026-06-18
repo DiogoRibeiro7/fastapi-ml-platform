@@ -1,5 +1,6 @@
 import logging
 from collections import Counter
+from typing import Protocol
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -86,6 +87,40 @@ async def _process_job(
             await jobs.mark_failed(job_id, str(exc))
 
 
+class BatchJobDispatcher(Protocol):
+    """Hands a created job off for execution by some backend."""
+
+    async def dispatch(self, job_id: str, transactions: list[TransactionInput]) -> None:
+        """Schedule scoring of a job's transactions."""
+        ...
+
+
+class InProcessBatchDispatcher:
+    """Run batch jobs on the in-process async queue (closure-based)."""
+
+    def __init__(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        model_bundle: ModelBundle,
+        settings: Settings,
+        queue: JobQueue,
+    ) -> None:
+        self._session_factory = session_factory
+        self._model_bundle = model_bundle
+        self._settings = settings
+        self._queue = queue
+
+    async def dispatch(self, job_id: str, transactions: list[TransactionInput]) -> None:
+        """Enqueue the job as a closure over the live session factory and model."""
+
+        async def run() -> None:
+            await _process_job(
+                job_id, transactions, self._session_factory, self._model_bundle, self._settings
+            )
+
+        await self._queue.enqueue(run)
+
+
 class BatchJobService:
     """Business logic for asynchronous batch-scoring jobs."""
 
@@ -94,33 +129,18 @@ class BatchJobService:
         *,
         repository: BatchJobRepository,
         dead_letter_repository: DeadLetterRepository,
-        session_factory: async_sessionmaker[AsyncSession],
-        model_bundle: ModelBundle,
-        settings: Settings,
-        queue: JobQueue,
+        dispatcher: BatchJobDispatcher,
     ) -> None:
         self._repository = repository
         self._dead_letter_repository = dead_letter_repository
-        self._session_factory = session_factory
-        self._model_bundle = model_bundle
-        self._settings = settings
-        self._queue = queue
+        self._dispatcher = dispatcher
 
     async def submit(self, request: BatchPredictionRequest) -> BatchJobResponse:
-        """Create a job and enqueue it for background scoring."""
+        """Create a job and dispatch it for background scoring."""
 
         job_id = uuid4().hex
         row = await self._repository.create(job_id=job_id, total=len(request.transactions))
-
-        transactions = list(request.transactions)
-        model_bundle = self._model_bundle
-        settings = self._settings
-        session_factory = self._session_factory
-
-        async def run() -> None:
-            await _process_job(job_id, transactions, session_factory, model_bundle, settings)
-
-        await self._queue.enqueue(run)
+        await self._dispatcher.dispatch(job_id, list(request.transactions))
         return BatchJobResponse.model_validate(row)
 
     async def get_job(self, job_id: str) -> BatchJobResponse:

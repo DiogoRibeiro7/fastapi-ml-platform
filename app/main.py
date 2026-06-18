@@ -13,6 +13,7 @@ from app.core.jobs import BackgroundJobQueue
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
 from app.core.rate_limit import RateLimiter, make_rate_limit_middleware
+from app.core.redis_queue import make_rq_queue
 from app.core.request_limits import make_request_size_limit_middleware
 from app.core.scheduler import PeriodicScheduler
 from app.core.tracing import configure_tracing
@@ -150,6 +151,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         app.state.model_provider = model_provider
         app.state.job_queue = BackgroundJobQueue()
+        if app_settings.job_backend == "redis":
+            app.state.rq_queue = make_rq_queue(app_settings.redis_url)
 
         await create_database_tables(engine)
         await _bootstrap_admin_user(app_settings, session_factory)

@@ -1,10 +1,13 @@
-.PHONY: install run test lint format typecheck train evaluate docker-up docker-down
+.PHONY: install run worker test lint format typecheck train evaluate docker-up docker-down
 
 install:
 	python -m pip install -e ".[dev]"
 
 run:
 	uvicorn app.main:app --reload
+
+worker:
+	python scripts/run_worker.py
 
 test:
 	pytest
