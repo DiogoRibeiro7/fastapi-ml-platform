@@ -55,7 +55,7 @@
 ## Stage 6 — Deployment
 
 - [x] Add staging and production config profiles.
-- [ ] Add Terraform example.
+- [x] Add Terraform example.
 - [x] Add AWS ECS deployment guide.
 - [ ] Add Kubernetes manifests as optional material.
 - [ ] Add blue-green model deployment strategy.

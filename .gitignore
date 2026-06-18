@@ -62,6 +62,15 @@ desktop.ini
 *.log
 logs/
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+crash.log
+
 # Agent docs (local only)
 AGENTS.md
 CODE_AGENT_PROMPTS.md
