@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     process_jobs_inline: bool = Field(default=False)
     scheduled_report_interval_seconds: int | None = Field(default=None, ge=1)
     max_ingest_records: int = Field(default=10_000, ge=1)
+    rate_limit_requests: int = Field(default=120, ge=0)
+    rate_limit_window_seconds: int = Field(default=60, ge=1)
 
     @field_validator("log_level")
     @classmethod

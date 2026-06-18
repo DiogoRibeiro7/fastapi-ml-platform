@@ -47,7 +47,7 @@
 
 - [x] Add JWT auth.
 - [x] Add role-based access control.
-- [ ] Add per-client rate limits.
+- [x] Add per-client rate limits.
 - [ ] Add request-size limits.
 - [ ] Add data-retention policies.
 - [ ] Add PII masking in logs.

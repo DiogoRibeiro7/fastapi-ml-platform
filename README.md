@@ -238,6 +238,10 @@ Roles and access:
 
 Model-management endpoints (registering and activating models) require `admin`. Prediction and batch endpoints require `service` or `admin`. Missing credentials return `401`; an authenticated caller without a sufficient role returns `403`. Authentication failures and authorization denials are recorded as audit events.
 
+### Rate limiting
+
+Requests are rate limited per client over a fixed window. The client is identified by its API key, bearer token, or source IP (in that order). Exceeding `RATE_LIMIT_REQUESTS` within `RATE_LIMIT_WINDOW_SECONDS` returns `429` with a `Retry-After` header; allowed responses carry `X-RateLimit-Remaining`. Health and metrics endpoints are exempt. Set `RATE_LIMIT_REQUESTS=0` to disable. The counter is in-process; a multi-instance deployment would back it with a shared store such as Redis.
+
 ## Metrics and monitoring
 
 The service exposes Prometheus metrics at `GET /metrics` (unauthenticated, for scraping):

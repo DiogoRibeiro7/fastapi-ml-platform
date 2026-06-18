@@ -12,6 +12,7 @@ from app.core.correlation import correlation_id_middleware
 from app.core.jobs import BackgroundJobQueue
 from app.core.logging import configure_logging
 from app.core.metrics import prometheus_middleware
+from app.core.rate_limit import RateLimiter, make_rate_limit_middleware
 from app.core.scheduler import PeriodicScheduler
 from app.core.tracing import configure_tracing
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
@@ -146,6 +147,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     if app_settings.enable_tracing:
         configure_tracing(app, app_settings)
+
+    if app_settings.rate_limit_requests > 0:
+        limiter = RateLimiter(
+            app_settings.rate_limit_requests,
+            app_settings.rate_limit_window_seconds,
+        )
+        # Added before the metrics middleware so rate-limited 429s are counted.
+        app.middleware("http")(make_rate_limit_middleware(limiter))
 
     app.middleware("http")(prometheus_middleware)
     # Added last so it is the outermost middleware: the correlation id is set

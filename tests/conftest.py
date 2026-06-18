@@ -34,6 +34,7 @@ def client(tmp_path: Path, api_key: str) -> Iterator[TestClient]:
         jwt_secret="test-jwt-secret",
         bootstrap_admin_username=ADMIN_USERNAME,
         bootstrap_admin_password=ADMIN_PASSWORD,
+        rate_limit_requests=100_000,
     )
     app = create_app(settings=settings)
 
