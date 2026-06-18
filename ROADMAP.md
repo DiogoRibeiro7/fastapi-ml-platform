@@ -50,7 +50,7 @@
 - [x] Add per-client rate limits.
 - [x] Add request-size limits.
 - [ ] Add data-retention policies.
-- [ ] Add PII masking in logs.
+- [x] Add PII masking in logs.
 
 ## Stage 6 — Deployment
 

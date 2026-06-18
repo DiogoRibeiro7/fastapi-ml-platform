@@ -261,6 +261,10 @@ HTTP metrics are collected in middleware and prediction metrics in the scoring s
 
 Every response carries an `X-Request-ID` header. Send your own to trace a request across services, or let the service generate one. The id is attached to every structured log line as `request_id`, so logs for a single request can be grouped end to end.
 
+### PII masking
+
+A redacting filter on the logging pipeline masks sensitive fields (`customer_id`, `email`, `password`, `card_number`, `token`, and similar) before any log line is emitted. Anything passed to a logger via `extra=` under a sensitive key is replaced with `***`, so personal data and secrets never reach the log sink even if logged accidentally.
+
 ### Audit logs
 
 Security- and governance-relevant actions emit structured audit events on the dedicated `audit` logger, each carrying an `action`, an `outcome`, the `request_id`, and action-specific fields:
