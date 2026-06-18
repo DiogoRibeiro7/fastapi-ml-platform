@@ -56,6 +56,6 @@
 
 - [ ] Add staging and production config profiles.
 - [ ] Add Terraform example.
-- [ ] Add AWS ECS deployment guide.
+- [x] Add AWS ECS deployment guide.
 - [ ] Add Kubernetes manifests as optional material.
 - [ ] Add blue-green model deployment strategy.

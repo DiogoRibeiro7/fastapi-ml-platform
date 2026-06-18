@@ -150,6 +150,10 @@ This starts:
 - PostgreSQL on port `5432`.
 - Redis on port `6379` for future background workers.
 
+## Deployment
+
+A practical, production-shaped deployment walkthrough for AWS ECS Fargate (architecture, required services, environment variables, image build/push, migration strategy, and monitoring) is in [docs/deployment/aws-ecs.md](docs/deployment/aws-ecs.md).
+
 ## Train a demo model
 
 ```bash
