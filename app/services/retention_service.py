@@ -30,7 +30,8 @@ class RetentionService:
             result = await self._session.execute(
                 delete(model).where(timestamp_column < cutoff)
             )
-            deleted[name] = int(result.rowcount or 0)
+            # execute() is typed as Result, but a DELETE yields a CursorResult.
+            deleted[name] = int(getattr(result, "rowcount", 0) or 0)
 
         await self._session.commit()
         return deleted
