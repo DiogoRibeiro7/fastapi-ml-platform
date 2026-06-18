@@ -58,4 +58,4 @@
 - [x] Add Terraform example.
 - [x] Add AWS ECS deployment guide.
 - [x] Add Kubernetes manifests as optional material.
-- [ ] Add blue-green model deployment strategy.
+- [x] Add blue-green model deployment strategy.

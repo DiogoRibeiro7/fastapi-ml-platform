@@ -99,3 +99,5 @@ Provision RDS with automated backups and Multi-AZ for production. Restrict the d
 ## Rollout and rollback
 
 Deploy by registering a new task definition revision pointing at the new image tag and updating the service. ECS performs a rolling replacement behind the ALB; unhealthy tasks are drained automatically. To roll back, update the service to the previous task definition revision — because images are pinned by git SHA, this is deterministic.
+
+Deploying a new **model** is separate from deploying new **code**: see [blue-green-models.md](blue-green-models.md) for zero-downtime model promotion and rollback via the model registry.
