@@ -242,6 +242,10 @@ Model-management endpoints (registering and activating models) require `admin`. 
 
 Requests are rate limited per client over a fixed window. The client is identified by its API key, bearer token, or source IP (in that order). Exceeding `RATE_LIMIT_REQUESTS` within `RATE_LIMIT_WINDOW_SECONDS` returns `429` with a `Retry-After` header; allowed responses carry `X-RateLimit-Remaining`. Health and metrics endpoints are exempt. Set `RATE_LIMIT_REQUESTS=0` to disable. The counter is in-process; a multi-instance deployment would back it with a shared store such as Redis.
 
+### Request-size limits
+
+Requests whose body exceeds `MAX_REQUEST_BYTES` are rejected with `413` based on the `Content-Length` header, before the body is read into memory. Set `MAX_REQUEST_BYTES=0` to disable.
+
 ## Metrics and monitoring
 
 The service exposes Prometheus metrics at `GET /metrics` (unauthenticated, for scraping):

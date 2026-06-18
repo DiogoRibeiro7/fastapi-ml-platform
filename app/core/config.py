@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     max_ingest_records: int = Field(default=10_000, ge=1)
     rate_limit_requests: int = Field(default=120, ge=0)
     rate_limit_window_seconds: int = Field(default=60, ge=1)
+    max_request_bytes: int = Field(default=1_048_576, ge=0)
 
     @field_validator("log_level")
     @classmethod
