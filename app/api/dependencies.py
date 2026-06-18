@@ -27,6 +27,7 @@ from app.services.metrics_service import MetricsService
 from app.services.model_registry_service import ModelRegistryService
 from app.services.model_service import ModelService
 from app.services.prediction_service import PredictionService
+from app.services.retention_service import RetentionService
 from app.services.threshold_service import ThresholdOptimizationService
 
 
@@ -259,6 +260,14 @@ def get_ingestion_service(
         batch_job_service=batch_job_service,
         max_records=settings.max_ingest_records,
     )
+
+
+def get_retention_service(
+    session: AsyncSession = Depends(get_db_session),
+) -> RetentionService:
+    """Build the data-retention service for the current request."""
+
+    return RetentionService(session)
 
 
 def get_metrics_service(

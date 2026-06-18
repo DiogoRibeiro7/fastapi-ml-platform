@@ -73,6 +73,7 @@ On first startup the app trains and saves a seeded scikit-learn baseline model a
 | `GET` | `/metrics` | Expose Prometheus metrics for scraping. |
 | `POST` | `/v1/auth/login` | Exchange credentials for a JWT access token. |
 | `POST` | `/v1/auth/users` | Create a user (admin only). |
+| `POST` | `/v1/admin/retention/cleanup` | Purge records past the retention window (admin only). |
 
 ## Quick start
 
@@ -260,6 +261,10 @@ HTTP metrics are collected in middleware and prediction metrics in the scoring s
 ### Correlation IDs
 
 Every response carries an `X-Request-ID` header. Send your own to trace a request across services, or let the service generate one. The id is attached to every structured log line as `request_id`, so logs for a single request can be grouped end to end.
+
+### Data retention
+
+Prediction logs, drift reports, and dead letters can be purged after a retention window. Set `DATA_RETENTION_DAYS` to the number of days to keep, and `RETENTION_CLEANUP_INTERVAL_SECONDS` to run the purge automatically on that interval. Administrators can also trigger a one-off cleanup with `POST /v1/admin/retention/cleanup` (an optional `days` query parameter overrides the configured window); the response reports how many rows were deleted per table.
 
 ### PII masking
 

@@ -41,6 +41,8 @@ class Settings(BaseSettings):
     max_batch_size: int = Field(default=100, ge=1, le=10_000)
     process_jobs_inline: bool = Field(default=False)
     scheduled_report_interval_seconds: int | None = Field(default=None, ge=1)
+    data_retention_days: int | None = Field(default=None, ge=1)
+    retention_cleanup_interval_seconds: int | None = Field(default=None, ge=1)
     max_ingest_records: int = Field(default=10_000, ge=1)
     rate_limit_requests: int = Field(default=120, ge=0)
     rate_limit_window_seconds: int = Field(default=60, ge=1)

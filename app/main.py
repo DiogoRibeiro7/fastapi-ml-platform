@@ -23,6 +23,7 @@ from app.repositories.model_registry_repository import ModelRegistryRepository
 from app.repositories.user_repository import UserRepository
 from app.services.auth_service import AuthService
 from app.services.drift_report_service import run_scheduled_drift_report
+from app.services.retention_service import run_retention_cleanup
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +99,30 @@ def _start_report_scheduler(
     return scheduler
 
 
+def _start_retention_scheduler(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> PeriodicScheduler | None:
+    """Start the periodic data-retention cleanup when configured."""
+
+    interval = settings.retention_cleanup_interval_seconds
+    retention_days = settings.data_retention_days
+    if not interval or not retention_days:
+        return None
+
+    async def cleanup_task() -> None:
+        await run_retention_cleanup(session_factory, retention_days)
+
+    scheduler = PeriodicScheduler(interval, cleanup_task)
+    scheduler.start()
+    logger.info(
+        "Scheduled retention cleanup every %s seconds (keep %s days).",
+        interval,
+        retention_days,
+    )
+    return scheduler
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     """Create and configure the FastAPI application.
 
@@ -130,13 +155,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await _bootstrap_admin_user(app_settings, session_factory)
         await _promote_active_registered_model(session_factory, model_provider)
 
-        scheduler = _start_report_scheduler(app_settings, session_factory)
-        app.state.report_scheduler = scheduler
+        schedulers = [
+            _start_report_scheduler(app_settings, session_factory),
+            _start_retention_scheduler(app_settings, session_factory),
+        ]
+        app.state.schedulers = schedulers
 
         yield
 
-        if scheduler is not None:
-            await scheduler.stop()
+        for scheduler in schedulers:
+            if scheduler is not None:
+                await scheduler.stop()
         await dispose_engine(engine)
 
     app = FastAPI(
