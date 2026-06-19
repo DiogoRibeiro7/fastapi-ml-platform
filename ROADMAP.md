@@ -1,5 +1,8 @@
 # Roadmap
 
+Stages 1–6 are complete. Stage 7 captures enhancements delivered beyond the
+original plan. Stages 8+ are forward-looking and not yet started.
+
 ## Stage 1 — Complete API foundation
 
 - [x] FastAPI app factory.
@@ -59,3 +62,37 @@
 - [x] Add AWS ECS deployment guide.
 - [x] Add Kubernetes manifests as optional material.
 - [x] Add blue-green model deployment strategy.
+
+## Stage 7 — Post-roadmap enhancements (delivered)
+
+- [x] Add a Redis/RQ job-queue backend (selectable via `JOB_BACKEND`).
+- [x] Add Alembic database migrations (gated by `AUTO_CREATE_TABLES`).
+- [x] Harden CI: PostgreSQL integration test, coverage gate, dependency audit.
+- [x] Propagate correlation IDs across the Redis worker boundary.
+
+## Stage 8 — ML lifecycle automation
+
+- [ ] Add a train-and-register flow (train, persist artifact, and register in one step).
+- [ ] Add canary / weighted model serving (route a fraction of traffic to a candidate).
+- [ ] Add shadow scoring (run a candidate alongside the active model without affecting decisions).
+- [ ] Trigger retraining automatically when drift exceeds a threshold.
+- [ ] Record model lineage (training data snapshot, code version, parent model).
+- [ ] Capture ground-truth outcomes to enable calibration on real production data.
+
+## Stage 9 — Performance and scale
+
+- [ ] Add load and latency benchmarks (`.benchmarks/`) with a regression gate.
+- [ ] Add response/feature caching for repeated lookups.
+- [ ] Externalize the scheduler so the API can scale horizontally.
+- [ ] Parallelize batch scoring within a job.
+- [ ] Tune database connection pooling and add read replicas support.
+- [ ] Back rate limiting with Redis for multi-instance accuracy.
+
+## Stage 10 — Operations and governance
+
+- [ ] Add Grafana dashboards and Prometheus alerting rules.
+- [ ] Define SLOs and error budgets for scoring latency and availability.
+- [ ] Ship audit logs to a dedicated sink (SIEM) with retention.
+- [ ] Add a model approval workflow (request, review, approve before promotion).
+- [ ] Add data-subject deletion (GDPR) by customer id.
+- [ ] Add role-scoped API keys and key rotation.
