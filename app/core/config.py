@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     bootstrap_admin_password: str | None = Field(default=_DEFAULT_ADMIN_PASSWORD)
 
     database_url: str = Field(default="sqlite+aiosqlite:///./fraud_api.db")
+    auto_create_tables: bool = Field(default=True)
     model_artifact_path: Path = Field(default=Path("artifacts/fraud_model.joblib"))
     model_metadata_path: Path = Field(default=Path("artifacts/fraud_model_metadata.json"))
     train_baseline_if_missing: bool = Field(default=True)

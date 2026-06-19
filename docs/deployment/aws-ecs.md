@@ -80,11 +80,11 @@ The Docker build trains and bakes the baseline model artifact into the image, so
 
 ## Database and migration strategy
 
-The app calls `create_all` on startup, which is convenient for demos but is **not** a migration strategy for production. For real deployments:
+The app calls `create_all` on startup, which is convenient for dev but is **not** a migration strategy for production. Alembic migrations are included ([`migrations/`](../../migrations/)). For real deployments:
 
-1. Add Alembic and generate migrations from the SQLAlchemy models in [`app/db/models.py`](../../app/db/models.py).
-2. Run migrations as a one-off ECS task (same image, command overridden to `alembic upgrade head`) **before** rolling out a new service revision. Gate the deploy on its success.
-3. Keep `create_all` for local/dev only, or guard it behind an environment flag.
+1. Set `AUTO_CREATE_TABLES=false` so the app does not create tables on startup.
+2. Run `alembic upgrade head` as a one-off ECS task (same image, command overridden) **before** rolling out a new service revision, and gate the deploy on its success.
+3. Generate new migrations during development with `make migration m="describe change"`, review them, and commit them.
 
 Provision RDS with automated backups and Multi-AZ for production. Restrict the database security group to the ECS task security group only. The bootstrap admin is created idempotently on startup; rotate its password and create per-user accounts via `POST /v1/auth/users`.
 

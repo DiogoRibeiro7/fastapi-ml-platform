@@ -319,6 +319,15 @@ scrape_configs:
       - targets: ["localhost:8000"]
 ```
 
+## Database migrations
+
+Schema is managed with Alembic ([`migrations/`](migrations/)). For local development the app creates tables on startup (`AUTO_CREATE_TABLES=true`, the default). For production, set `AUTO_CREATE_TABLES=false` and apply migrations explicitly:
+
+```bash
+make migrate                      # alembic upgrade head
+make migration m="add a column"   # autogenerate a new revision after model changes
+```
+
 ## Run tests
 
 ```bash

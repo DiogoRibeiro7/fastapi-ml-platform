@@ -47,6 +47,7 @@ dev = [
     "redis>=5.0,<7.0",
     "rq>=1.16,<3.0",
     "fakeredis>=2.20,<3.0",
+    "alembic>=1.13,<2.0",
 ]
 
 [tool.setuptools.packages.find]
@@ -55,6 +56,8 @@ include = ["app*"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Alembic-generated migration scripts follow their own conventions.
+extend-exclude = ["migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "ANN", "S"]
@@ -74,7 +77,7 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Security", "fastapi.Query"
 python_version = "3.11"
 strict = true
 plugins = []
-exclude = ["tests"]
+exclude = ["tests", "migrations"]
 
 [[tool.mypy.overrides]]
 module = ["joblib.*", "sklearn.*", "shap.*", "opentelemetry.*", "rq.*", "redis.*", "fakeredis.*"]

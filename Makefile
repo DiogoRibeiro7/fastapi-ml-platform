@@ -1,4 +1,4 @@
-.PHONY: install run worker test lint format typecheck train evaluate docker-up docker-down
+.PHONY: install run worker test lint format typecheck train evaluate migrate migration docker-up docker-down
 
 install:
 	python -m pip install -e ".[dev]"
@@ -20,6 +20,12 @@ format:
 
 typecheck:
 	mypy app
+
+migrate:
+	alembic upgrade head
+
+migration:
+	alembic revision --autogenerate -m "$(m)"
 
 train:
 	python scripts/train_model.py

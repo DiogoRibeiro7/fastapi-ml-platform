@@ -154,7 +154,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if app_settings.job_backend == "redis":
             app.state.rq_queue = make_rq_queue(app_settings.redis_url)
 
-        await create_database_tables(engine)
+        # Convenient for dev/tests; production runs Alembic migrations instead
+        # and sets AUTO_CREATE_TABLES=false.
+        if app_settings.auto_create_tables:
+            await create_database_tables(engine)
         await _bootstrap_admin_user(app_settings, session_factory)
         await _promote_active_registered_model(session_factory, model_provider)
 
