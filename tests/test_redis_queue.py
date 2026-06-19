@@ -1,14 +1,17 @@
 import asyncio
 from pathlib import Path
 
+import pytest
 from fakeredis import FakeStrictRedis
 from rq import Queue, SimpleWorker
 
 from app.core.config import Settings
+from app.core.correlation import get_request_id, reset_request_id, set_request_id
 from app.core.redis_queue import RedisBatchDispatcher
 from app.db.session import build_session_factory, create_database_tables, dispose_engine
 from app.repositories.batch_job_repository import BatchJobRepository
 from app.schemas.prediction import TransactionInput
+from app.services import batch_tasks
 
 
 def _transaction(txn_id: str) -> dict[str, object]:
@@ -99,3 +102,47 @@ def test_redis_dispatch_enqueues_without_running(tmp_path: Path) -> None:
     assert queue.count == 1
     enqueued = queue.jobs[0]
     assert enqueued.func_name.endswith("run_batch_job_task")
+
+
+def test_dispatch_captures_current_correlation_id(tmp_path: Path) -> None:
+    """The dispatcher should attach the request's correlation id to the job."""
+
+    settings = Settings(database_url="sqlite+aiosqlite:///x.db", job_backend="redis")
+    queue = Queue(connection=FakeStrictRedis())
+
+    token = set_request_id("trace-abc")
+    try:
+        asyncio.run(
+            RedisBatchDispatcher(queue, settings).dispatch(
+                "job-3", [TransactionInput.model_validate(_transaction("a"))]
+            )
+        )
+    finally:
+        reset_request_id(token)
+
+    assert queue.jobs[0].args[-1] == "trace-abc"
+
+
+def test_worker_restores_correlation_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The worker task should restore the correlation id while scoring, then reset."""
+
+    captured: dict[str, str] = {}
+
+    async def fake_process_job(*args: object, **kwargs: object) -> None:
+        captured["request_id"] = get_request_id()
+
+    monkeypatch.setattr(batch_tasks, "_process_job", fake_process_job)
+
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'w.db'}",
+        model_artifact_path=tmp_path / "missing.joblib",
+        model_metadata_path=tmp_path / "missing.json",
+        train_baseline_if_missing=False,
+    )
+
+    batch_tasks.run_batch_job_task("job-4", [], settings, "trace-xyz")
+
+    assert captured["request_id"] == "trace-xyz"
+    assert get_request_id() == "-"  # context restored after the task

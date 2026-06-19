@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 from app.core.config import Settings
+from app.core.correlation import reset_request_id, set_request_id
 from app.db.session import build_session_factory, dispose_engine
 from app.ml.model_loader import load_model_bundle
 from app.schemas.prediction import TransactionInput
@@ -37,7 +38,17 @@ def run_batch_job_task(
     job_id: str,
     transactions_data: list[dict[str, Any]],
     settings: Settings,
+    request_id: str = "-",
 ) -> None:
-    """RQ entrypoint: synchronous wrapper that runs the async job to completion."""
+    """RQ entrypoint: run the async job, carrying the originating request id.
 
-    asyncio.run(_run_batch_job(job_id, transactions_data, settings))
+    The correlation id is restored from the enqueued job so the worker's log
+    lines tie back to the request that submitted the batch, even though the
+    worker runs in a separate process.
+    """
+
+    token = set_request_id(request_id)
+    try:
+        asyncio.run(_run_batch_job(job_id, transactions_data, settings))
+    finally:
+        reset_request_id(token)

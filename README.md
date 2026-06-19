@@ -211,7 +211,7 @@ Large batches can be scored asynchronously. `POST /v1/transactions/batch-score-j
 Jobs are persisted in the database and processed by a configurable backend (`JOB_BACKEND`):
 
 - `inprocess` (default) — an in-process `asyncio` worker. Set `PROCESS_JOBS_INLINE=true` to run jobs synchronously (used in tests).
-- `redis` — batch jobs are enqueued to Redis via [RQ](https://python-rq.org/) and executed by a separate worker process, so scoring scales independently of the API. Install the extra (`pip install -e ".[queue]"`), set `REDIS_URL`, and run a worker with `make worker` (or `python scripts/run_worker.py`). The worker rebuilds its own database session and model from settings; dead-letter handling and result reporting are identical to the in-process backend.
+- `redis` — batch jobs are enqueued to Redis via [RQ](https://python-rq.org/) and executed by a separate worker process, so scoring scales independently of the API. Install the extra (`pip install -e ".[queue]"`), set `REDIS_URL`, and run a worker with `make worker` (or `python scripts/run_worker.py`). The worker rebuilds its own database session and model from settings; dead-letter handling and result reporting are identical to the in-process backend. The originating request's correlation id is carried across the queue, so the worker's log lines trace back to the submitting request.
 
 For bulk ingestion from a file or stream, `POST /v1/transactions/ingest` accepts a raw payload — a JSON array, a single JSON object, or newline-delimited JSON (one transaction per line) — parses and validates it, and submits it as a batch job. Payloads above `MAX_INGEST_RECORDS` are rejected with `413`; malformed or invalid payloads return `422`.
 

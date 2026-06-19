@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.core.config import Settings
+from app.core.correlation import get_request_id
 from app.schemas.prediction import TransactionInput
 from app.services.batch_tasks import run_batch_job_task
 
@@ -29,4 +30,6 @@ class RedisBatchDispatcher:
         """Enqueue the job as a serializable RQ task."""
 
         payload = [transaction.model_dump(mode="json") for transaction in transactions]
-        self._queue.enqueue(run_batch_job_task, job_id, payload, self._settings)
+        self._queue.enqueue(
+            run_batch_job_task, job_id, payload, self._settings, get_request_id()
+        )
