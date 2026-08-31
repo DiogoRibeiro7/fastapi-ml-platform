@@ -75,7 +75,10 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Security", "fastapi.Query"
 "tests/*" = ["S105", "S106"]
 
 [tool.mypy]
-python_version = "3.11"
+# CI runs mypy on 3.12, and numpy's bundled stubs now use `type` statements, which are
+# 3.12 syntax. Checking as 3.11 made mypy refuse to parse them and fail before it reached
+# any of this project's code. Nothing here tests 3.11, so 3.12 is what is actually true.
+python_version = "3.12"
 strict = true
 plugins = []
 exclude = ["tests", "migrations"]
