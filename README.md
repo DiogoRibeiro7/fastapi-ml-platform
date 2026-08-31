@@ -357,3 +357,7 @@ app/
 ## Why this is a good portfolio project
 
 Most FastAPI portfolio projects stop at CRUD. This project shows how to structure a service that has real production concerns: request validation, model serving, async persistence, authentication, metrics, drift checks, testing, and deployment.
+
+## Licence
+
+[MIT](LICENSE).
