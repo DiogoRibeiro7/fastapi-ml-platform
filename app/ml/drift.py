@@ -25,8 +25,12 @@ def population_stability_index(
     observed_counts, _ = np.histogram(observed_array, bins=breakpoints)
 
     epsilon = 1e-6
-    baseline_share = baseline_counts / max(baseline_counts.sum(), 1)
-    observed_share = observed_counts / max(observed_counts.sum(), 1)
+    # `max()` over a numpy scalar and an int widens to a comparison protocol that ndarray
+    # division does not accept. Histogram counts are integers, so say so.
+    baseline_total = max(int(baseline_counts.sum()), 1)
+    observed_total = max(int(observed_counts.sum()), 1)
+    baseline_share = baseline_counts / baseline_total
+    observed_share = observed_counts / observed_total
 
     baseline_share = np.where(baseline_share == 0, epsilon, baseline_share)
     observed_share = np.where(observed_share == 0, epsilon, observed_share)
