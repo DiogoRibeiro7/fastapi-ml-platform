@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any
 
+from dataexcept import FileReadError, ModelSerializationError
+
 from app.core.audit import record_audit_event
 from app.core.exceptions import ModelNotFoundError, ModelPromotionError
 from app.ml.model_loader import load_registered_bundle
@@ -113,7 +115,7 @@ class ModelRegistryService:
                 version=row.version,
                 metrics=row.metrics,
             )
-        except (FileNotFoundError, TypeError) as exc:
+        except (FileReadError, ModelSerializationError) as exc:
             raise ModelPromotionError(
                 f"Cannot promote model {row.name} {row.version}: {exc}"
             ) from exc

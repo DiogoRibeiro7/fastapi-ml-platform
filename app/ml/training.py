@@ -13,6 +13,7 @@ from typing import Any
 
 import joblib
 import numpy as np
+from dataexcept import FileWriteError, ModelSerializationError
 from numpy.typing import NDArray
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -130,8 +131,14 @@ def train_baseline_model(
         "metrics": metrics,
     }
 
-    artifact_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, artifact_path)
-    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    try:
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(model, artifact_path)
+    except Exception as exc:
+        raise ModelSerializationError(str(artifact_path), exc) from exc
+    try:
+        metadata_path.parent.mkdir(parents=True, exist_ok=True)
+        metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    except OSError as exc:
+        raise FileWriteError(str(metadata_path), exc) from exc
     return metadata

@@ -176,6 +176,15 @@ artifacts/fraud_model_metadata.json
 
 On startup, the API loads this artifact. If it is missing, the API trains and saves the baseline model automatically (the dataset generator is seeded, so the result is deterministic). Set `TRAIN_BASELINE_IF_MISSING=false` to disable auto-training and use the rule-based fallback model instead. The Docker image bakes the trained artifact in at build time.
 
+Model artifact and metadata failures use
+[DataExcept](https://github.com/DiogoRibeiro7/DataExcept):
+`ModelSerializationError` identifies an artifact that cannot be saved or loaded,
+`FileReadError` identifies missing registered artifacts or unreadable metadata,
+and `FileWriteError` identifies metadata write failures. Each error retains its
+original cause. A failed promotion still returns HTTP 422 and leaves the live
+model unchanged; an invalid active model on restart still falls back to the
+default model. DataExcept limits the supported Python range to 3.11–3.14.
+
 ## Explainability
 
 Each prediction returns `top_features`, a local explanation of the score. By default this is a fast linear contribution (`feature value × model coefficient`).

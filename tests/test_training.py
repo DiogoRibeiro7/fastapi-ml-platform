@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+from dataexcept import FileWriteError, ModelSerializationError
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
@@ -19,6 +21,35 @@ def test_train_baseline_model_persists_artifacts(tmp_path: Path) -> None:
     assert metadata_path.exists()
     assert metadata["version"] == MODEL_VERSION
     assert 0.5 < metadata["metrics"]["roc_auc"] <= 1.0
+
+
+def test_training_reports_artifact_write_failure(tmp_path: Path) -> None:
+    """A failed artifact save carries the destination and underlying error."""
+    artifact = tmp_path / "existing-directory"
+    artifact.mkdir()
+
+    with pytest.raises(ModelSerializationError) as caught:
+        train_baseline_model(artifact, tmp_path / "metadata.json", n_samples=600)
+
+    assert caught.value.path == str(artifact)
+    assert isinstance(caught.value.original, OSError)
+    assert caught.value.__cause__ is caught.value.original
+
+
+def test_training_reports_metadata_write_failure(tmp_path: Path) -> None:
+    """A saved artifact does not conceal failure to persist its metadata."""
+    blocked = tmp_path / "not-a-directory"
+    blocked.write_text("blocked", encoding="utf-8")
+    artifact = tmp_path / "model.joblib"
+    metadata = blocked / "metadata.json"
+
+    with pytest.raises(FileWriteError) as caught:
+        train_baseline_model(artifact, metadata, n_samples=600)
+
+    assert artifact.exists()
+    assert caught.value.path == str(metadata)
+    assert isinstance(caught.value.original, OSError)
+    assert caught.value.__cause__ is caught.value.original
 
 
 def test_startup_trains_baseline_when_artifact_missing(

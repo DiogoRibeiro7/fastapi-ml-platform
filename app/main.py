@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+from dataexcept import FileReadError, ModelSerializationError
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -53,7 +54,7 @@ async def _promote_active_registered_model(
             version=active.version,
             metrics=active.metrics,
         )
-    except (FileNotFoundError, TypeError):
+    except (FileReadError, ModelSerializationError):
         logger.exception(
             "Active registered model %s could not be loaded; serving the default model.",
             active.version,
