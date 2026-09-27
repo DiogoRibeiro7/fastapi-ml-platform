@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import Any
 
-from sqlalchemy import Select, desc, func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import PredictionLog
@@ -50,11 +50,7 @@ class PredictionRepository:
     async def list_recent(self, limit: int = 500) -> list[PredictionLog]:
         """Return the most recent prediction logs."""
 
-        statement: Select[tuple[PredictionLog]] = (
-            select(PredictionLog)
-            .order_by(desc(PredictionLog.created_at))
-            .limit(limit)
-        )
+        statement = select(PredictionLog).order_by(desc(PredictionLog.created_at)).limit(limit)
         result = await self._session.execute(statement)
         return list(result.scalars().all())
 

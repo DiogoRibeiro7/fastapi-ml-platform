@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, cast
 
+from dataexcept import FileReadError, ModelSerializationError
 from numpy.typing import NDArray
 
 from app.ml.feature_pipeline import FEATURE_NAMES
@@ -73,16 +74,20 @@ class RuleBasedFraudModel:
 
 
 def _load_joblib_model(artifact_path: Path) -> ProbabilityModel | None:
-    """Load a joblib model if the artifact exists."""
+    """Load an existing artifact, retaining failed deserialization context."""
 
     if not artifact_path.exists():
         return None
 
     import joblib
 
-    loaded_model = joblib.load(artifact_path)
+    try:
+        loaded_model = joblib.load(artifact_path)
+    except Exception as exc:
+        raise ModelSerializationError(str(artifact_path), exc) from exc
     if not hasattr(loaded_model, "predict_proba"):
-        raise TypeError("Loaded model must expose a predict_proba method.")
+        incompatible = TypeError("Loaded model must expose a predict_proba method.")
+        raise ModelSerializationError(str(artifact_path), incompatible) from incompatible
     return cast(ProbabilityModel, loaded_model)
 
 
@@ -92,8 +97,11 @@ def _load_metadata(metadata_path: Path) -> dict[str, Any]:
     if not metadata_path.exists():
         return {}
 
-    with metadata_path.open("r", encoding="utf-8") as file:
-        raw_metadata: dict[str, Any] = json.load(file)
+    try:
+        with metadata_path.open("r", encoding="utf-8") as file:
+            raw_metadata: dict[str, Any] = json.load(file)
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise FileReadError(str(metadata_path), exc) from exc
     return raw_metadata
 
 
@@ -180,7 +188,8 @@ def load_registered_bundle(
 
     model = _load_joblib_model(artifact_path)
     if model is None:
-        raise FileNotFoundError(f"Model artifact not found: {artifact_path}")
+        exc = FileNotFoundError(f"Model artifact not found: {artifact_path}")
+        raise FileReadError(str(artifact_path), exc) from exc
 
     return ModelBundle(
         model=model,

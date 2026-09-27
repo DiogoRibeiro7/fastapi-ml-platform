@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
+from app.main import create_app
 from app.ml.training import train_baseline_model
 
 
@@ -146,6 +148,58 @@ def test_activate_missing_artifact_returns_422(
     # The failed promotion must not flip the active flag.
     models = client.get("/v1/models", headers=admin_headers).json()["models"]
     assert all(model["is_active"] is False for model in models)
+
+
+def test_activate_corrupt_artifact_returns_422_without_swapping(
+    client: TestClient,
+    admin_headers: dict[str, str],
+    tmp_path: Path,
+) -> None:
+    """A failed deserialization keeps the current model and registry state."""
+    artifact = tmp_path / "corrupt.joblib"
+    artifact.write_bytes(b"invalid model bytes")
+    registered = client.post(
+        "/v1/models", headers=admin_headers, json=_registration_payload("v1", str(artifact))
+    ).json()
+
+    response = client.post(f"/v1/models/{registered['id']}/activate", headers=admin_headers)
+
+    assert response.status_code == 422
+    current = client.get("/v1/models/current", headers=admin_headers).json()
+    assert current["version"] == "rule-based-v1"
+    models = client.get("/v1/models", headers=admin_headers).json()["models"]
+    assert all(model["is_active"] is False for model in models)
+
+
+def test_restart_with_corrupt_active_artifact_serves_default(tmp_path: Path) -> None:
+    """An invalid promoted artifact cannot prevent the service from starting."""
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'registry.db'}",
+        model_artifact_path=tmp_path / "default-missing.joblib",
+        model_metadata_path=tmp_path / "default-missing.json",
+        train_baseline_if_missing=False,
+        rate_limit_requests=100_000,
+    )
+    artifact = _train_artifact(tmp_path, "v1")
+
+    with TestClient(create_app(settings=settings)) as first:
+        token = first.post(
+            "/v1/auth/login", json={"username": "admin", "password": "admin-password"}
+        ).json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        registered = first.post(
+            "/v1/models", headers=headers, json=_registration_payload("v1", str(artifact))
+        ).json()
+        activation = first.post(f"/v1/models/{registered['id']}/activate", headers=headers)
+        assert activation.status_code == 200
+
+    artifact.write_bytes(b"invalid model bytes")
+
+    with TestClient(create_app(settings=settings)) as restarted:
+        current = restarted.get("/v1/models/current", headers=headers)
+
+    assert current.status_code == 200
+    assert current.json()["version"] == "rule-based-v1"
 
 
 def test_compare_models_reports_metric_deltas(
